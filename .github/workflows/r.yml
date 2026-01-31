@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false # Se um der erro, o outro continua
       matrix:
-        script: ["modelagem_EF.R", "modelagem_EM.R"] 
+        script: ["modelagemEF.R", "modelagemEM.R"] 
     # -----------------------------------------------------------
 
     # Permissões necessárias para ler o repo
