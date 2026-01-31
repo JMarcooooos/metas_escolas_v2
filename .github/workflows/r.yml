@@ -1,18 +1,20 @@
 name: Modelagem Completa (EF e EM)
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch: # Botão manual para iniciar
 
 jobs:
   analise_bayesiana:
     runs-on: ubuntu-latest
     
+    # --- ESTRATÉGIA DE MATRIZ (RODA OS 2 SCRIPTS EM PARALELO) ---
     strategy:
-      fail-fast: false 
+      fail-fast: false # Se um der erro, o outro continua
       matrix:
         script: ["modelagem_EF.R", "modelagem_EM.R"] 
-    # ----------------------------------------
+    # -----------------------------------------------------------
 
+    # Permissões necessárias para ler o repo
     permissions:
       contents: read
 
@@ -20,11 +22,12 @@ jobs:
       - name: Checkout do Código
         uses: actions/checkout@v4
 
-      - name: Configurar R
+      - name: Configurar R (RSPM para velocidade máxima)
         uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
 
+      # --- BLOCO DE CACHE DO CMDSTAN (TURBO) ---
       - name: Cache CmdStan
         id: cache-cmdstan
         uses: actions/cache@v4
@@ -32,19 +35,21 @@ jobs:
           path: /home/runner/.cmdstan
           key: ${{ runner.os }}-cmdstan-2.34.1
 
-   - name: Instalar CmdStan (Se necessário)
+      - name: Instalar CmdStan e Criar Pasta (Se não houver cache)
         if: steps.cache-cmdstan.outputs.cache-hit != 'true'
         run: |
-            # 1. CRIA A PASTA PRIMEIRO (O comando Mágico)
+            # 1. A CORREÇÃO: Cria a pasta antes de tudo
             mkdir -p /home/runner/.cmdstan
 
-            # 2. Instala o pacote R
+            # 2. Instala o pacote R temporariamente para baixar o binário
             Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
             
-            # 3. Instala o binário na pasta que criamos
+            # 3. Instala o motor C++ (Isso que demora e será cacheado)
             Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
 
-      - name: Instalar Dependências
+      # --- FIM DO BLOCO DE CACHE ---
+
+      - name: Instalar Dependências do Projeto
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -57,13 +62,17 @@ jobs:
 
       - name: Rodar Script ${{ matrix.script }}
         run: |
+          # Garante que o R saiba onde procurar o CmdStan
           echo "CMDSTAN_PATH=/home/runner/.cmdstan/cmdstan-2.34.1" >> .Renviron
+          
+          # Roda o script da vez (EF ou EM)
           Rscript ${{ matrix.script }}
 
-      # SALVA OS RESULTADOS COM NOMES DIFERENTES
+      # --- SALVA OS RESULTADOS ---
       - name: Upload Resultados (${{ matrix.script }})
         uses: actions/upload-artifact@v4
         with:
+          # O nome do zip será diferente para cada script (ex: resultados-modelagem_EF.R)
           name: resultados-${{ matrix.script }}
           path: |
             *.csv
