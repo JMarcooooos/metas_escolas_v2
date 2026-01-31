@@ -1,0 +1,65 @@
+name: Modelagem Completa (EF e EM)
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  analise_bayesiana:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false 
+      matrix:
+        script: ["modelagem_EF.R", "modelagem_EM.R"] 
+    # ----------------------------------------
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Configurar R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Cache CmdStan
+        id: cache-cmdstan
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cmdstan
+          key: ${{ runner.os }}-cmdstan-2.34.1
+
+      - name: Instalar CmdStan (Se necessário)
+        if: steps.cache-cmdstan.outputs.cache-hit != 'true'
+        run: |
+            Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
+            Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
+
+      - name: Instalar Dependências
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::brms
+            any::tidyverse
+            any::tidybayes
+            any::recipes
+            any::readxl
+            stan-dev/cmdstanr
+
+      - name: Rodar Script ${{ matrix.script }}
+        run: |
+          echo "CMDSTAN_PATH=/home/runner/.cmdstan/cmdstan-2.34.1" >> .Renviron
+          Rscript ${{ matrix.script }}
+
+      # SALVA OS RESULTADOS COM NOMES DIFERENTES
+      - name: Upload Resultados (${{ matrix.script }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-${{ matrix.script }}
+          path: |
+            *.csv
+            *.rds
+          retention-days: 5
