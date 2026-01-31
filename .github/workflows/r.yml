@@ -32,10 +32,16 @@ jobs:
           path: /home/runner/.cmdstan
           key: ${{ runner.os }}-cmdstan-2.34.1
 
-      - name: Instalar CmdStan (Se necessário)
+   - name: Instalar CmdStan (Se necessário)
         if: steps.cache-cmdstan.outputs.cache-hit != 'true'
         run: |
+            # 1. CRIA A PASTA PRIMEIRO (O comando Mágico)
+            mkdir -p /home/runner/.cmdstan
+
+            # 2. Instala o pacote R
             Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
+            
+            # 3. Instala o binário na pasta que criamos
             Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
 
       - name: Instalar Dependências
