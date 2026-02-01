@@ -27,7 +27,7 @@ message("Arquivo 'dados_para_o_mapa.rds' gerado com sucesso!")
 
 
 message("--- 3. PROCESSANDO MAPAS (OFFLINE) ---")
-caminho_shapes_brutos <- "Bases/shapes_goias_bruto.rds"
+caminho_shapes_brutos <- "shapes_goias_bruto.rds"
 
 if (!file.exists(caminho_shapes_brutos)) {
   stop("ERRO CRÍTICO: O arquivo 'shapes_goias_bruto.rds' não foi encontrado na pasta Bases/.")
