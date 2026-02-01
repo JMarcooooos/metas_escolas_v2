@@ -22,7 +22,7 @@ dados_finais <- dados_modelo %>%
   inner_join(dados_latlong, by = "CD_ESCOLA") %>%
   filter(!is.na(LATITUDE), !is.na(LONGITUDE))
 
-saveRDS(dados_finais, "dados_para_o_mapa.rds")
+saveRDS(dados_finais, "app/dados_para_o_mapa.rds")
 message("Arquivo 'dados_para_o_mapa.rds' gerado com sucesso!")
 
 message("--- 3. GERANDO SHAPES (MAPA) ---")
@@ -38,5 +38,5 @@ shape_munis_enrich <- shape_munis %>%
   inner_join(tabela_regionais, by = "chave_join")
 
 objetos_mapa <- list(estado = shape_estado, municipios = shape_munis_enrich)
-saveRDS(objetos_mapa, "mapa_shapes.rds")
+saveRDS(objetos_mapa, "app/mapa_shapes.rds")
 message("Arquivo 'mapa_shapes.rds' gerado com sucesso!")
