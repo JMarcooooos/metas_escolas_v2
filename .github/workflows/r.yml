@@ -110,8 +110,7 @@ jobs:
             any::stringi
             any::shiny          
             any::leaflet        
-            any::bslib          
-            any::bsicons
+            any::bslib  
             any::shinyWidgets
             any::leaflet.extras
             any::DT

@@ -5,7 +5,6 @@ library(dplyr)
 library(sf)
 library(DT)
 library(bslib)
-library(bsicons)
 library(shinyWidgets)
 library(htmltools)
 
@@ -471,19 +470,19 @@ ui <- page_sidebar(
     value_box(
       title = "Total Selecionado", 
       value = textOutput("kpi_total"), 
-      showcase = bs_icon("buildings-fill"), 
+      showcase = tags$i(class = "bi bi-buildings-fill"),
       theme = "primary"
     ),
     value_box(
       title = "Atenção", 
       value = textOutput("kpi_risco"), 
-      showcase = bs_icon("exclamation-triangle-fill"), 
+      showcase = tags$i(class = "bi bi-exclamation-triangle-fill"),
       theme = "danger"
     ),
     value_box(
       title = "Sucesso", 
       value = textOutput("kpi_sucesso"), 
-      showcase = bs_icon("check-circle-fill"), 
+      showcase = tags$i(class = "bi bi-check-circle-fill"),
       theme = "success"
     )
   ),
