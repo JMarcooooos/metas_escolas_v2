@@ -7,7 +7,7 @@ on:
 
 jobs:
   # ====================================================
-  # JOB 1: MODELAGEM (Mantido - está ok)
+  # JOB 1: MODELAGEM (IGUAL AO ANTERIOR)
   # ====================================================
   modelagem:
     runs-on: ubuntu-latest
@@ -64,7 +64,7 @@ jobs:
             *.rda
 
   # ====================================================
-  # JOB 2: DEPLOY (AGORA VAI)
+  # JOB 2: DEPLOY (CORRIGIDO PACOTES E NOME)
   # ====================================================
   deploy:
     needs: modelagem 
@@ -73,7 +73,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # IMPORTANTE: Use RSPM aqui para instalar rápido as dependências do sistema
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
@@ -92,8 +91,8 @@ jobs:
           path: .
           merge-multiple: true
       
-      # Instala pacotes. O SF vai vir do RSPM (rápido), mas vamos consertar isso depois.
-      - name: Instalar Pacotes R
+      # ADICIONEI bsicons E shinyjs AQUI
+      - name: Instalar Pacotes R (Sistema + SF + Extras)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -110,73 +109,57 @@ jobs:
             any::leaflet.extras
             any::DT
             any::jsonlite
+            any::bsicons
+            any::shinyjs
 
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
 
-      # ==================================================================
-      # A CURA DEFINITIVA: SCRIPT DE DEPLOY COM BYPASS
-      # ==================================================================
-      - name: Deploy Especial
+      # MANTIVE O HACK DO SF (CRUCIAL PARA NÃO DAR ERRO DE NOVO)
+      - name: Hackear Descrição dos Pacotes (Fix SF/RSPM)
         run: |
-          cat <<EOF > special_deploy.R
-          # 1. LIMPA CONFIGURAÇÕES DE REPOSITÓRIO
-          # Isso impede o rsconnect de ver "RSPM" no options("repos")
+          Rscript -e "
+            pkgs_to_fix <- c('sf', 'geobr', 'leaflet', 'units', 'classInt', 's2')
+            lib_loc <- .libPaths()[1]
+            for (pkg in pkgs_to_fix) {
+              desc_path <- file.path(lib_loc, pkg, 'DESCRIPTION')
+              if (file.exists(desc_path)) {
+                d <- read.dcf(desc_path)
+                if ('Repository' %in% colnames(d)) {
+                  d[1, 'Repository'] <- 'CRAN'
+                  write.dcf(d, file = desc_path)
+                }
+                lines <- readLines(desc_path)
+                lines <- lines[!grepl('^Remote', lines)]
+                writeLines(lines, desc_path)
+              }
+            }
+          "
+
+      # AQUI EU CRIO O SCRIPT DE DEPLOY NA HORA COM UM NOME VÁLIDO
+      - name: Publicar no ShinyApps (Nome Sanitizado)
+        run: |
+          cat <<EOF > deploy_final.R
+          library(rsconnect)
+          
+          # Força CRAN
           options(repos = c(CRAN = "https://cloud.r-project.org"))
           
-          # 2. CONFIGURA CONTA
-          library(rsconnect)
-          setAccountInfo(
-            name = Sys.getenv("SHINY_ACC_NAME"),
-            token = Sys.getenv("SHINY_TOKEN"),
-            secret = Sys.getenv("SHINY_SECRET")
-          )
-
-          # 3. GERA MANIFESTO HACKEADO
-          # Vamos gerar o manifesto manualmente e editar o JSON
-          # Assim temos controle total sobre o que é enviado
+          # Configura conta
+          setAccountInfo(name = Sys.getenv("SHINY_ACC_NAME"),
+                         token = Sys.getenv("SHINY_TOKEN"),
+                         secret = Sys.getenv("SHINY_SECRET"))
           
-          cat("Gerando manifesto...\n")
-          writeManifest(appDir = "app", appFiles = c("app.R", "dados_para_o_mapa.rds", "mapa_shapes.rds"))
-          
-          # 4. LIMPEZA PROFUNDA NO JSON
-          library(jsonlite)
-          manifest_path <- "app/manifest.json"
-          manifest <- read_json(manifest_path)
-          
-          # Remove source e repository de TODOS os pacotes
-          if(!is.null(manifest\$packages)) {
-            for(i in seq_along(manifest\$packages)) {
-               manifest\$packages[[i]]\$Source <- "CRAN"
-               manifest\$packages[[i]]\$Repository <- "CRAN"
-               
-               if(!is.null(manifest\$packages[[i]]\$description)) {
-                 manifest\$packages[[i]]\$description\$Repository <- "CRAN"
-                 # Remove campos perigosos que apontam para Linux/RSPM
-                 manifest\$packages[[i]]\$description\$RemoteType <- NULL
-                 manifest\$packages[[i]]\$description\$RemoteHost <- NULL
-                 manifest\$packages[[i]]\$description\$RemoteRepo <- NULL
-               }
-            }
-          }
-          write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
-          cat("Manifesto limpo e salvo.\n")
-
-          # 5. DEPLOY USANDO O MANIFESTO GERADO
-          # O segredo é deployApp(..., launch.browser=FALSE) e garantir que ele leia o manifesto
-          # Mas o rsconnect moderno insiste em regerar.
-          # O truque final é usar deployApp() mas confiar que nossa limpeza de options(repos)
-          # fará ele gerar um manifesto limpo se ele decidir regerar.
-          
-          cat("Iniciando upload...\n")
+          # Deploy com nome seguro (sem espaços, sem underline, minúsculo)
           deployApp(
-            appDir = "app", 
+            appDir = "app",
+            appName = "metas-escolas-painel", 
             forceUpdate = TRUE,
             launch.browser = FALSE
           )
           EOF
           
-          Rscript special_deploy.R
+          Rscript deploy_final.R
         env:
           SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
           SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
