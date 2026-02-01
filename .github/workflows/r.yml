@@ -63,6 +63,10 @@ jobs:
             *.xlsx
             *.rds
             *.rda
+            
+      - name: Force CRAN repo
+        run: |
+          echo 'options(repos = c(CRAN = "https://cloud.r-project.org"))' > app/.Rprofile
 
   # ====================================================
   # JOB 2: DEPLOY (Processa e Publica)
