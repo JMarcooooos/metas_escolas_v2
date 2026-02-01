@@ -11,7 +11,7 @@ library(shinyjs)
 library(bsicons)
 
 # ==============================================================================
-# 1. CARREGAMENTO DE DADOS (MANTIDO INTACTO)
+# 1. CARREGAMENTO DE DADOS
 # ==============================================================================
 
 if (file.exists("dados_para_o_mapa.rds")) {
@@ -29,7 +29,7 @@ lista_regionais <- sort(unique(dados_mapa$NM_REGIONAL))
 lista_status    <- sort(unique(dados_mapa$CLASSIFICACAO))
 
 # ==============================================================================
-# 2. CSS DINÂMICO (COM CORREÇÃO DE SCROLLBAR)
+# 2. CSS DINÂMICO (COM CORREÇÃO DE SCROLLBAR E NOVOS ESTILOS DE RODAPÉ)
 # ==============================================================================
 
 css_dinamico <- "
@@ -37,7 +37,7 @@ css_dinamico <- "
   --transition-speed: 0.3s;
 }
 
-/* --- DEFINIÇÃO DAS CORES (MODO ESCURO) --- */
+/* --- MODO ESCURO --- */
 body.dark-mode {
   --bg-body: #0f172a;
   --bg-sidebar: rgba(15, 23, 42, 0.95);
@@ -48,14 +48,15 @@ body.dark-mode {
   --input-bg: rgba(15, 23, 42, 0.8);
   --accent: #a78bfa;              
   --table-hover: rgba(139, 92, 246, 0.15);
+  --footer-bg: rgba(15, 23, 42, 0.95);
   
-  /* Cores da Scrollbar Dark */
+  /* Scrollbar Dark */
   --sb-track: #0f172a;
   --sb-thumb: #475569;
   --sb-thumb-hover: #a78bfa;
 }
 
-/* --- DEFINIÇÃO DAS CORES (MODO CLARO) --- */
+/* --- MODO CLARO --- */
 body.light-mode {
   --bg-body: #f8fafc;
   --bg-sidebar: #ffffff;
@@ -66,14 +67,15 @@ body.light-mode {
   --input-bg: #f1f5f9;
   --accent: #6366f1;              
   --table-hover: rgba(99, 102, 241, 0.1);
+  --footer-bg: #ffffff;
   
-  /* Cores da Scrollbar Light */
+  /* Scrollbar Light */
   --sb-track: #e2e8f0;
   --sb-thumb: #94a3b8;
   --sb-thumb-hover: #6366f1;
 }
 
-/* --- APLICAÇÃO GLOBAL --- */
+/* --- GLOBAL --- */
 body {
   background-color: var(--bg-body) !important;
   color: var(--text-primary) !important;
@@ -81,63 +83,28 @@ body {
   transition: background-color var(--transition-speed), color var(--transition-speed);
 }
 
-/* --- SCROLLBARS (Forçando aplicação em tudo) --- */
-/* Funciona no Chrome, Edge, Safari */
-*::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-  background-color: var(--sb-track);
-}
+/* --- SCROLLBARS --- */
+*::-webkit-scrollbar { width: 10px; height: 10px; background-color: var(--sb-track); }
+*::-webkit-scrollbar-track { background-color: var(--sb-track); border-radius: 4px; }
+*::-webkit-scrollbar-thumb { background-color: var(--sb-thumb); border-radius: 6px; border: 2px solid var(--sb-track); }
+*::-webkit-scrollbar-thumb:hover { background-color: var(--sb-thumb-hover); }
 
-*::-webkit-scrollbar-track {
-  background-color: var(--sb-track);
-  border-radius: 4px;
-}
-
-*::-webkit-scrollbar-thumb {
-  background-color: var(--sb-thumb);
-  border-radius: 6px;
-  border: 2px solid var(--sb-track);
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background-color: var(--sb-thumb-hover);
-}
-
-/* --- FORÇAR CORES NOS TÍTULOS E LABELS --- */
-.control-label, label, .shiny-input-container label {
-  color: var(--text-primary) !important;
-  font-weight: 700 !important;
-  transition: color var(--transition-speed);
-}
-
-h1, h2, h3, h4, h5, h6 {
+/* --- TEXTOS E TÍTULOS --- */
+.control-label, label, .shiny-input-container label, h1, h2, h3, h4, h5, h6 {
   color: var(--text-primary) !important;
   transition: color var(--transition-speed);
 }
+
 .dynamic-subtitle {
   color: var(--accent) !important;
   font-weight: 600;
   letter-spacing: 1px;
 }
 
-/* Legenda da Caixa de Modo Escuro */
-.material-switch label {
-  color: var(--text-primary) !important;
-}
-
 /* --- SIDEBAR --- */
 .bslib-sidebar-layout > .sidebar {
   background-color: var(--bg-sidebar) !important;
   border-right: 1px solid var(--border-color) !important;
-}
-
-.sidebar-title {
-  background: linear-gradient(90deg, var(--accent), #06b6d4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-family: 'Outfit', sans-serif !important;
-  font-weight: 800 !important;
 }
 
 /* --- CARDS --- */
@@ -147,71 +114,68 @@ h1, h2, h3, h4, h5, h6 {
   backdrop-filter: blur(10px);
   color: var(--text-primary) !important;
 }
-
 .card-header {
   border-bottom: 1px solid var(--border-color) !important;
   color: var(--text-primary) !important;
   font-weight: 700;
 }
 
-/* --- INPUTS E BOTÕES --- */
-.form-control, .selectize-input, .btn-light {
+/* --- INPUTS --- */
+.form-control, .selectize-input, .btn-light, .filter-option-inner-inner, .dropdown-toggle {
   background-color: var(--input-bg) !important;
   color: var(--text-primary) !important;
   border: 1px solid var(--border-color) !important;
 }
-
-.filter-option-inner-inner, .dropdown-toggle {
-  color: var(--text-primary) !important;
-}
-
 .dropdown-menu {
   background-color: var(--bg-sidebar) !important;
   border: 1px solid var(--border-color) !important;
 }
-.dropdown-menu li a {
-  color: var(--text-primary) !important;
-}
-.dropdown-menu li a:hover {
-  background-color: var(--accent) !important;
-  color: #fff !important;
-}
+.dropdown-menu li a { color: var(--text-primary) !important; }
+.dropdown-menu li a:hover { background-color: var(--accent) !important; color: #fff !important; }
 
-/* --- TABELA (DATATABLES) --- */
-.dataTables_wrapper {
-  color: var(--text-primary) !important;
-}
-table.dataTable tbody tr {
-  background-color: transparent !important;
-  color: var(--text-primary) !important;
-}
-table.dataTable tbody tr:hover {
-  background-color: var(--table-hover) !important;
-}
+/* --- TABELA E BOTÕES DE DOWNLOAD --- */
+.dataTables_wrapper { color: var(--text-primary) !important; }
+table.dataTable tbody tr { background-color: transparent !important; color: var(--text-primary) !important; }
+table.dataTable tbody tr:hover { background-color: var(--table-hover) !important; }
 .dataTables_length select, .dataTables_filter input {
   background-color: var(--input-bg) !important;
   color: var(--text-primary) !important;
   border: 1px solid var(--border-color) !important;
 }
-.paginate_button {
+.paginate_button { color: var(--text-primary) !important; }
+.paginate_button.current { background: var(--accent) !important; color: #fff !important; border: none; }
+
+/* Botões do DT (Excel, CSV) */
+.dt-buttons .dt-button {
+  background: var(--input-bg) !important;
   color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 5px;
+  margin-right: 5px;
 }
-.paginate_button.current {
+.dt-buttons .dt-button:hover {
   background: var(--accent) !important;
   color: #fff !important;
-  border: none;
+}
+
+/* --- RODAPÉ --- */
+.footer-text {
+  text-align: center;
+  margin-top: 40px;
+  padding: 20px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  background-color: var(--footer-bg);
 }
 
 /* --- VALUE BOXES ICONS --- */
-.bslib-value-box .value-box-showcase svg {
-  fill: var(--accent) !important;
-}
-.bslib-value-box .value-box-title {
-  color: var(--text-secondary) !important;
-}
-.bslib-value-box .value-box-value {
-  color: var(--text-primary) !important;
-}
+.bslib-value-box .value-box-showcase svg { fill: var(--accent) !important; }
+.bslib-value-box .value-box-title { color: var(--text-secondary) !important; }
+.bslib-value-box .value-box-value { color: var(--text-primary) !important; }
+
+/* Switch Label Corrigido */
+.material-switch label { color: var(--text-primary) !important; }
 "
 
 # ==============================================================================
@@ -219,7 +183,7 @@ table.dataTable tbody tr:hover {
 # ==============================================================================
 
 ui <- page_fillable(
-  title = "SEDUC GO | Intelligence Platform",
+  title = "SEDUC GO | Estimativa de Metas",
   theme = bs_theme(version = 5, primary = "#8b5cf6"),
   
   tags$head(
@@ -249,12 +213,7 @@ ui <- page_fillable(
     sidebar = sidebar(
       width = 320,
       
-      div(
-        class = "sidebar-title",
-        style = "margin-bottom: 20px; font-size: 1.3rem;",
-        tags$i(class = "bi bi-grid-fill", style = "margin-right: 10px;"),
-        "CONTROL CENTER"
-      ),
+      # Título "Control Center" REMOVIDO conforme solicitado
       
       selectInput("filtro_etapa", "Etapa de Ensino", choices = unique(dados_mapa$ETAPA)),
       
@@ -282,10 +241,9 @@ ui <- page_fillable(
       
       hr(style="border-color: var(--border-color); opacity: 0.5;"),
       
-      # --- CAIXA DE MODO ESCURO (MODIFICADA: Sem ícone, sem texto "Aparência") ---
+      # Caixa de Modo Escuro sem título e sem ícone
       div(
         style = "background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);",
-        # O switch ocupa toda a largura agora para ficar elegante
         materialSwitch(inputId = "dark_mode", label = "Modo Escuro", value = TRUE, status = "primary", right = TRUE, width = "100%")
       ),
       
@@ -301,8 +259,8 @@ ui <- page_fillable(
       div(
         style = "display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px;",
         div(
-          h1("Monitoramento Estratégico", style = "margin: 0; font-weight: 800; font-size: 2rem; font-family: 'Outfit';"),
-          div(class = "dynamic-subtitle", "Inteligência de Dados • SEDUC GO")
+          h1("Estimativa da Probabilidade de Alcance de Meta", style = "margin: 0; font-weight: 800; font-size: 2rem; font-family: 'Outfit';"),
+          div(class = "dynamic-subtitle", "Coordenação de Estatística e Dados • SEDUC GO")
         ),
         div(
           style = "color: var(--text-secondary); font-size: 0.8rem;",
@@ -323,6 +281,13 @@ ui <- page_fillable(
         height = "800px",
         nav_panel("Geoanálise", icon = icon("map"), leafletOutput("mapa", height = "100%")),
         nav_panel("Dados Tabulares", icon = icon("table"), div(style = "padding: 10px;", DTOutput("tabela")))
+      ),
+      
+      # Rodapé Institucional
+      div(
+        class = "footer-text",
+        tags$b("Superintendência de Gestão Estratégica e Avaliação de Resultados"), br(),
+        "Secretaria de Estado da Educação de Goiás"
       )
     )
   )
@@ -446,7 +411,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # --- Tabela (COLUNAS E DADOS INTACTOS) ---
+  # --- Tabela COM BOTÕES DE DOWNLOAD ---
   output$tabela <- renderDT({
     df <- dados_filtrados()
     colunas <- c("NM_ESCOLA", "NM_MUNICIPIO", "NM_REGIONAL", "CLASSIFICACAO", "Prob_Media")
@@ -457,9 +422,24 @@ server <- function(input, output, session) {
     df_tab <- df %>% select(any_of(colunas))
     if("Prob_Media" %in% names(df_tab)) df_tab <- mutate(df_tab, Prob_Media = paste0(round(Prob_Media * 100, 1), "%"))
     
-    datatable(df_tab, selection = 'single', rownames = FALSE,
-              options = list(pageLength = 10, scrollX = TRUE, dom = 'frtp', 
-                             language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Portuguese-Brasil.json'))) %>%
+    # Renderização da Tabela com Botões
+    datatable(
+      df_tab, 
+      selection = 'single', 
+      rownames = FALSE,
+      extensions = 'Buttons', # <--- Ativando extensão
+      options = list(
+        pageLength = 10, 
+        scrollX = TRUE, 
+        dom = 'Bfrtip', # <--- 'B' adiciona os botões no topo
+        buttons = list(
+          list(extend = 'excel', title = "Relatorio_Metas_Seduc", text = 'Baixar Excel'),
+          list(extend = 'csv', title = "Dados_Brutos", text = 'Baixar CSV'),
+          list(extend = 'copy', text = 'Copiar')
+        ),
+        language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Portuguese-Brasil.json')
+      )
+    ) %>%
       formatStyle('CLASSIFICACAO',
                   color = styleEqual(c('VERDE', 'AMARELO', 'VERMELHO'), c('#10b981', '#f59e0b', '#f43f5e')),
                   fontWeight = 'bold')
