@@ -46,7 +46,7 @@ dados_teste_proc_ef <- bake(receita_escala, new_data = dados_teste_ef %>% mutate
 message("--- Iniciando Modelagem Bayesiana (CmdStanR) ---")
 
 # Modelo BRMS Otimizado para GitHub Actions
-modelo_bayes <- brm(
+modelo_bayes_ef_final <- brm(
   formula = bf(Y_num ~ . -CD_ESCOLA -NM_ESCOLA -NM_REGIONAL -NM_MUNICIPIO + (1 | NM_REGIONAL) + (1 | NM_MUNICIPIO), 
                family = bernoulli(link = "logit")),
   data = dados_prontos_stan,
