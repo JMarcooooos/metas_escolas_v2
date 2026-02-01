@@ -33,9 +33,9 @@ jobs:
       - name: Instalar CmdStan
         if: steps.cache-cmdstan.outputs.cache-hit != 'true'
         run: |
-            mkdir -p /home/runner/.cmdstan
-            Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
-            Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
+          mkdir -p /home/runner/.cmdstan
+          Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
+          Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
 
       - name: Instalar Dependências R (Modelagem)
         uses: r-lib/actions/setup-r-dependencies@v2
