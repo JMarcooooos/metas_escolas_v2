@@ -14,8 +14,13 @@ library(bsicons)
 # 1. CARREGAMENTO DE DADOS (MANTIDO INTACTO)
 # ==============================================================================
 
-dados_mapa <- readRDS("app/dados_para_o_mapa.rds")
-shapes     <- readRDS("app/mapa_shapes.rds")
+if (file.exists("dados_para_o_mapa.rds")) {
+  dados_mapa <- readRDS("dados_para_o_mapa.rds")
+  shapes     <- readRDS("mapa_shapes.rds")
+} else {
+  dados_mapa <- readRDS("app/dados_para_o_mapa.rds")
+  shapes     <- readRDS("app/mapa_shapes.rds")
+}
 
 shape_estado <- shapes$estado
 shape_munis  <- shapes$municipios
