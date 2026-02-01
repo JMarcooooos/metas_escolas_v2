@@ -5,8 +5,8 @@ library(geobr)
 library(sf)
 
 message("--- 1. LENDO RESULTADOS DO MODELO (Descompactados) ---")
-df_ef <- read_csv("resultado_previsao_escolas_ef.csv") %>% mutate(ETAPA = "Ensino Fundamental")
-df_em <- read_csv("resultado_previsao_escolas_EM.csv") %>% mutate(ETAPA = "Ensino Médio")
+df_ef <- read_excel("resultado_previsao_escolas_ef.xlsx",skip = 5) %>% mutate(ETAPA = "Ensino Fundamental")
+df_em <- read_excel("resultado_previsao_escolas_EM.xlsx", skip=5) %>% mutate(ETAPA = "Ensino Médio")
 
 dados_modelo <- bind_rows(df_ef, df_em)
 
