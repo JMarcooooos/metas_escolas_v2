@@ -77,4 +77,5 @@ jobs:
           path: |
             *.csv
             *.rds
+            *.xlsx
           retention-days: 5
