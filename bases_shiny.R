@@ -25,18 +25,28 @@ dados_finais <- dados_modelo %>%
 saveRDS(dados_finais, "app/dados_para_o_mapa.rds")
 message("Arquivo 'dados_para_o_mapa.rds' gerado com sucesso!")
 
-message("--- 3. GERANDO SHAPES (MAPA) ---")
+
+message("--- 3. PROCESSANDO MAPAS (OFFLINE) ---")
+caminho_shapes_brutos <- "Bases/shapes_goias_bruto.rds"
+
+if (!file.exists(caminho_shapes_brutos)) {
+  stop("ERRO CRÍTICO: O arquivo 'shapes_goias_bruto.rds' não foi encontrado na pasta Bases/.")
+}
+
+mapa_bruto <- readRDS(caminho_shapes_brutos)
+
+shape_estado <- mapa_bruto$estado
+shape_munis  <- mapa_bruto$municipios
+
 tabela_regionais <- dados_finais %>%
   distinct(NM_MUNICIPIO, NM_REGIONAL) %>%
-  mutate(chave_join = stringi::stri_trans_general(str = toupper(NM_MUNICIPIO), id = "Latin-ASCII"))
-
-shape_estado <- read_state(code_state = "GO", year = 2020, showProgress = FALSE)
-shape_munis  <- read_municipality(code_muni = "GO", year = 2020, showProgress = FALSE)
+  mutate(chave = stringi::stri_trans_general(str = toupper(NM_MUNICIPIO), id = "Latin-ASCII"))
 
 shape_munis_enrich <- shape_munis %>%
-  mutate(chave_join = stringi::stri_trans_general(str = toupper(name_muni), id = "Latin-ASCII")) %>%
-  inner_join(tabela_regionais, by = "chave_join")
+  mutate(chave = stringi::stri_trans_general(str = toupper(name_muni), id = "Latin-ASCII")) %>%
+  inner_join(tabela_regionais, by = "chave")
 
 objetos_mapa <- list(estado = shape_estado, municipios = shape_munis_enrich)
+
 saveRDS(objetos_mapa, "app/mapa_shapes.rds")
-message("Arquivo 'mapa_shapes.rds' gerado com sucesso!")
+message("Arquivo 'app/mapa_shapes.rds' gerado com sucesso!")
