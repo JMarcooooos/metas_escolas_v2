@@ -79,3 +79,23 @@ jobs:
             *.rds
             *.xlsx
           retention-days: 5
+          
+          - name: Instalar Pacotes para o Shiny
+        run: |
+          Rscript -e "install.packages(c('shiny', 'leaflet', 'leaflet.extras', 'bslib', 'bsicons', 'shinyWidgets', 'DT', 'sf', 'rsconnect', 'geobr'))"
+          # O sf e geobr demoram um pouco, tenha paciência na primeira vez
+
+      - name: Preparar Arquivos para Deploy
+        run: |
+          # Garante que o app.R e os dados gerados estão na raiz
+          # Se o seu script salvou em subpastas, mova-os aqui:
+          # mv Bases/dados_para_o_mapa.rds .
+          # mv Bases/mapa_shapes.rds .
+          ls -R # Lista arquivos para conferência no log
+
+      - name: Publicar no ShinyApps.io
+        run: Rscript deploy.R
+        env:
+          SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
+          SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
+          SHINY_SECRET: ${{ secrets.SHINY_SECRET }}
