@@ -185,7 +185,7 @@ if (exists("resultado_calibrado_em")) {
   adicionar_aba_formatada(wb, resultado_calibrado_em, "Ensino Médio", "Previsão de Metas - Ensino Médio")
 }
 
-saveWorkbook(wb, "resultado_previsao_escolas.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "resultado_previsao_escolas_em.xlsx", overwrite = TRUE)
 
 # 2. O modelo já foi salvo pelo brm no argumento 'file', mas garantindo extensão:
 # (O brms cria modelo_bayes_em_final.rds)
