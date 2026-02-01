@@ -7,7 +7,7 @@ on:
 
 jobs:
   # ====================================================
-  # JOB 1: MODELAGEM (IGUAL AO ANTERIOR)
+  # JOB 1: MODELAGEM (Mantido igual)
   # ====================================================
   modelagem:
     runs-on: ubuntu-latest
@@ -64,7 +64,7 @@ jobs:
             *.rda
 
   # ====================================================
-  # JOB 2: DEPLOY (CORRIGIDO PACOTES E NOME)
+  # JOB 2: DEPLOY (A SOLUÇÃO NUCLEAR)
   # ====================================================
   deploy:
     needs: modelagem 
@@ -91,8 +91,7 @@ jobs:
           path: .
           merge-multiple: true
       
-      # ADICIONEI bsicons E shinyjs AQUI
-      - name: Instalar Pacotes R (Sistema + SF + Extras)
+      - name: Instalar Pacotes R (Todos)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -115,47 +114,74 @@ jobs:
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
 
-      # MANTIVE O HACK DO SF (CRUCIAL PARA NÃO DAR ERRO DE NOVO)
-      - name: Hackear Descrição dos Pacotes (Fix SF/RSPM)
+      # ==================================================================
+      # A SOLUÇÃO NUCLEAR:
+      # Varre TODAS as pastas de pacotes instalados e remove referências ao RSPM.
+      # Não importa se é sf, bsicons ou shinyjs. Todos serão "batizados" como CRAN.
+      # ==================================================================
+      - name: Sanitizar TODOS os Pacotes (Nuclear Option)
         run: |
           Rscript -e "
-            pkgs_to_fix <- c('sf', 'geobr', 'leaflet', 'units', 'classInt', 's2')
             lib_loc <- .libPaths()[1]
-            for (pkg in pkgs_to_fix) {
+            # Pega TODOS os pacotes instalados na biblioteca principal
+            all_pkgs <- list.files(lib_loc)
+            
+            cat(paste('Processando', length(all_pkgs), 'pacotes para remover RSPM...\n'))
+            
+            for (pkg in all_pkgs) {
               desc_path <- file.path(lib_loc, pkg, 'DESCRIPTION')
+              
               if (file.exists(desc_path)) {
-                d <- read.dcf(desc_path)
-                if ('Repository' %in% colnames(d)) {
-                  d[1, 'Repository'] <- 'CRAN'
-                  write.dcf(d, file = desc_path)
-                }
-                lines <- readLines(desc_path)
-                lines <- lines[!grepl('^Remote', lines)]
-                writeLines(lines, desc_path)
+                tryCatch({
+                  d <- read.dcf(desc_path)
+                  modified <- FALSE
+                  
+                  # 1. Se tiver Repository: RSPM, muda para CRAN
+                  if ('Repository' %in% colnames(d)) {
+                    d[1, 'Repository'] <- 'CRAN'
+                    modified <- TRUE
+                  }
+                  
+                  if (modified) {
+                    write.dcf(d, file = desc_path)
+                  }
+                  
+                  # 2. Leitura bruta para remover linhas de Remote (github/rspm info)
+                  lines <- readLines(desc_path)
+                  original_len <- length(lines)
+                  # Remove linhas que começam com Remote (ex: RemoteType: standard)
+                  lines <- lines[!grepl('^Remote', lines)]
+                  
+                  if (length(lines) < original_len || modified) {
+                    writeLines(lines, desc_path)
+                  }
+                }, error = function(e) {
+                   cat(paste('Erro ao processar', pkg, ': ', e\$message, '\n'))
+                })
               }
             }
+            cat('Sanitização completa. Todos os pacotes agora parecem vir do CRAN.\n')
           "
 
-      # AQUI EU CRIO O SCRIPT DE DEPLOY NA HORA COM UM NOME VÁLIDO
-      - name: Publicar no ShinyApps (Nome Sanitizado)
+      - name: Publicar no ShinyApps
         run: |
           cat <<EOF > deploy_final.R
           library(rsconnect)
           
-          # Força CRAN
+          # Garante que o R 'pense' que está usando CRAN
           options(repos = c(CRAN = "https://cloud.r-project.org"))
           
-          # Configura conta
           setAccountInfo(name = Sys.getenv("SHINY_ACC_NAME"),
                          token = Sys.getenv("SHINY_TOKEN"),
                          secret = Sys.getenv("SHINY_SECRET"))
           
-          # Deploy com nome seguro (sem espaços, sem underline, minúsculo)
+          # Deploy com log detalhado
           deployApp(
             appDir = "app",
             appName = "metas-escolas-painel", 
             forceUpdate = TRUE,
-            launch.browser = FALSE
+            launch.browser = FALSE,
+            logLevel = "verbose"
           )
           EOF
           
