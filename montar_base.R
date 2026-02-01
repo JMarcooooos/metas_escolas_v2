@@ -7,9 +7,9 @@ library(readxl)
 
 bateu_meta_23 <- read_excel("Bases/METAS E IDEB 2023 - Escolas - Anos Finais e Ensino Médio - VERSÃO FINAL.xlsx",skip = 6) %>%
   select(`Código da Escola`,`Atingiu a Meta\r\nAnos Finais`,`Atingiu a Meta\r\nEnsino Médio`) %>%
-  janitor::remove_empty() %>%
   mutate(`Atingiu a Meta\r\nAnos Finais` = case_when(`Atingiu a Meta\r\nAnos Finais` == '-' ~ NA_character_, TRUE ~ `Atingiu a Meta\r\nAnos Finais`),
-         `Atingiu a Meta\r\nEnsino Médio` = case_when(`Atingiu a Meta\r\nEnsino Médio` == '-' ~ NA_character_, TRUE ~ `Atingiu a Meta\r\nEnsino Médio`))
+         `Atingiu a Meta\r\nEnsino Médio` = case_when(`Atingiu a Meta\r\nEnsino Médio` == '-' ~ NA_character_, TRUE ~ `Atingiu a Meta\r\nEnsino Médio`)) %>%
+  janitor::remove_empty()
 
 # Desafio menor que 0.4 (meta_23 - ideb_21) [V] (treino) ----
 
@@ -33,7 +33,8 @@ desafios <- read_excel("Bases/METAS E IDEB 2023 - Escolas - Anos Finais e Ensino
 desafios <- desafios %>%
   select(`Código da Escola`, `Meta\r\nAnos Finais 2023`,`Meta\r\nEnsino Médio 2023`) %>%
   mutate(`Meta\r\nAnos Finais 2023` = as.numeric(case_when(`Meta\r\nAnos Finais 2023` == '-' ~ NA_character_, TRUE ~ `Meta\r\nAnos Finais 2023`)),
-         `Meta\r\nEnsino Médio 2023` = as.numeric(case_when(`Meta\r\nEnsino Médio 2023` == '-' ~ NA_character_, TRUE ~ `Meta\r\nEnsino Médio 2023`))) 
+         `Meta\r\nEnsino Médio 2023` = as.numeric(case_when(`Meta\r\nEnsino Médio 2023` == '-' ~ NA_character_, TRUE ~ `Meta\r\nEnsino Médio 2023`))) %>%
+  janitor::remove_empty()
 
 # Juntando
 desafios_2023 <- desafios %>%
@@ -41,7 +42,7 @@ desafios_2023 <- desafios %>%
   left_join(ideb_21_em %>% select(ID_ESCOLA,VL_OBSERVADO_2021), by=c("Código da Escola" = "ID_ESCOLA")) %>%
   rename(IDEB_21_AF = VL_OBSERVADO_2021.x,
          IDEB_21_EM = VL_OBSERVADO_2021.y) %>%
-  janitor::remove_empty() %>%
+  filter(!(is.na(IDEB_21_AF) & is.na(IDEB_21_EM))) %>%
   mutate(Desafio_23_AF = `Meta\r\nAnos Finais 2023` - IDEB_21_AF,
          Desafio_23_EM = `Meta\r\nEnsino Médio 2023` - IDEB_21_EM) %>%
   mutate(Desafio_AF_menor = case_when(Desafio_23_AF >= 0.4 ~ 'NAO',
@@ -83,7 +84,7 @@ desafios_2025 <- desafios %>%
   left_join(ideb_23_em %>% select(ID_ESCOLA,VL_OBSERVADO_2023), by=c("Cod_Inep" = "ID_ESCOLA")) %>%
   rename(IDEB_23_AF = VL_OBSERVADO_2023.x,
          IDEB_23_EM = VL_OBSERVADO_2023.y) %>%
-  janitor::remove_empty() %>%
+filter(!(is.na(IDEB_23_AF) & is.na(IDEB_23_EM))) %>%
   mutate(Desafio_25_AF = `Meta 2025\r\nAnos Finais` - IDEB_23_AF,
          Desafio_25_EM = `Meta 2025\r\nEnsino Médio` - IDEB_23_EM) %>%
   mutate(Desafio_AF_menor = case_when(Desafio_25_AF >= 0.4 ~ 'NAO',
@@ -192,7 +193,8 @@ saego_2022e2023_EF_MT <- left_join(
   mutate(
     Proficiencia_2022 = as.numeric(gsub(",", ".", Proficiencia_2022)),
     Proficiencia_2023 = as.numeric(gsub(",", ".", Proficiencia_2023))) %>%
-  mutate(Crescimento = (Proficiencia_2023 - Proficiencia_2022))
+  mutate(Crescimento = (Proficiencia_2023 - Proficiencia_2022))  %>%
+  drop_na()
 
 # Crescimento EM
 saego_2022e2023_EM_LP <- left_join(
@@ -204,7 +206,8 @@ saego_2022e2023_EM_LP <- left_join(
   mutate(
     Proficiencia_2022 = as.numeric(gsub(",", ".", Proficiencia_2022)),
     Proficiencia_2023 = as.numeric(gsub(",", ".", Proficiencia_2023))) %>%
-  mutate(Crescimento = (Proficiencia_2023 - Proficiencia_2022))
+  mutate(Crescimento = (Proficiencia_2023 - Proficiencia_2022)) %>%
+  drop_na()
 
 saego_2022e2023_EM_MT <- left_join(
   saego_2023_EM %>% select(-`Proficiencia LP`), 
@@ -215,7 +218,8 @@ saego_2022e2023_EM_MT <- left_join(
   mutate(
     Proficiencia_2022 = as.numeric(gsub(",", ".", Proficiencia_2022)),
     Proficiencia_2023 = as.numeric(gsub(",", ".", Proficiencia_2023))) %>%
-  mutate(Crescimento = (Proficiencia_2023 - Proficiencia_2022))
+  mutate(Crescimento = (Proficiencia_2023 - Proficiencia_2022))  %>%
+  drop_na()
 
 crescimento_20222023 <- list(saego_2022e2023_EF_LP,
                              saego_2022e2023_EF_MT,
@@ -323,7 +327,8 @@ saego_2024e2025_EF_LP <- left_join(
   mutate(
     Proficiencia_2024 = as.numeric(gsub(",", ".", Proficiencia_2024)),
     Proficiencia_2025 = as.numeric(gsub(",", ".", Proficiencia_2025))) %>%
-  mutate(Crescimento = (Proficiencia_2025 - Proficiencia_2024))
+  mutate(Crescimento = (Proficiencia_2025 - Proficiencia_2024)) %>%
+  drop_na()
 
 saego_2024e2025_EF_MT <- left_join(
   saego_2024_EF %>% select(-`Proficiencia LP`), 
@@ -334,7 +339,8 @@ saego_2024e2025_EF_MT <- left_join(
   mutate(
     Proficiencia_2024 = as.numeric(gsub(",", ".", Proficiencia_2024)),
     Proficiencia_2025 = as.numeric(gsub(",", ".", Proficiencia_2025))) %>%
-  mutate(Crescimento = (Proficiencia_2025 - Proficiencia_2024))
+  mutate(Crescimento = (Proficiencia_2025 - Proficiencia_2024)) %>%
+  drop_na()
 
 # Crescimento EM
 saego_2024e2025_EM_LP <- left_join(
@@ -346,7 +352,8 @@ saego_2024e2025_EM_LP <- left_join(
   mutate(
     Proficiencia_2024 = as.numeric(gsub(",", ".", Proficiencia_2024)),
     Proficiencia_2025 = as.numeric(gsub(",", ".", Proficiencia_2025))) %>%
-  mutate(Crescimento = (Proficiencia_2025 - Proficiencia_2024))
+  mutate(Crescimento = (Proficiencia_2025 - Proficiencia_2024)) %>%
+  drop_na()
 
 saego_2024e2025_EM_MT <- left_join(
   saego_2024_EM %>% select(-`Proficiencia LP`), 
@@ -357,7 +364,8 @@ saego_2024e2025_EM_MT <- left_join(
   mutate(
     Proficiencia_2024 = as.numeric(gsub(",", ".", Proficiencia_2024)),
     Proficiencia_2025 = as.numeric(gsub(",", ".", Proficiencia_2025))) %>%
-  mutate(Crescimento = (Proficiencia_2025 - Proficiencia_2024))
+  mutate(Crescimento = (Proficiencia_2025 - Proficiencia_2024)) %>%
+  drop_na()
 
 crescimento_20242025 <- list(saego_2024e2025_EF_LP,
                              saego_2024e2025_EF_MT,
@@ -524,13 +532,14 @@ rm(list=setdiff(ls(),c("bateu_meta_23",
 
 
 # ===========================
-# ====== MONTANDO AS BASES ==
+# ==== MONTANDO AS BASES ====
 # ===========================
 
 # DADOS TREINO ----
 
 # ENSINO FUNDAMENTAL ANOS FINAIS ----
 dados_treino_ef <- bateu_meta_23 %>% select(`Código da Escola`,`Atingiu a Meta\r\nAnos Finais`) %>%
+  filter(!is.na(`Atingiu a Meta\r\nAnos Finais`)) %>%
   left_join(desafios_2023 %>% select(`Código da Escola`,Desafio_AF_menor),by="Código da Escola") %>%
   left_join(crescimento_20222023[["EF_LP"]] %>% select(`Código Escola`,Crescimento) %>% rename(Crescimento_LP = Crescimento) %>% mutate(`Código Escola` = as.double(`Código Escola`)),
             by=c("Código da Escola" = "Código Escola")) %>%
@@ -541,6 +550,7 @@ dados_treino_ef <- bateu_meta_23 %>% select(`Código da Escola`,`Atingiu a Meta\
   
 # ENSINO MEDIO ----
 dados_treino_em <- bateu_meta_23 %>% select(`Código da Escola`,`Atingiu a Meta\r\nEnsino Médio`) %>%
+  filter(!is.na(`Atingiu a Meta\r\nEnsino Médio`)) %>%
   left_join(desafios_2023 %>% select(`Código da Escola`,Desafio_EM_menor),by="Código da Escola") %>%
   left_join(crescimento_20222023[["EM_LP"]] %>% select(`Código Escola`,Crescimento) %>% rename(Crescimento_LP = Crescimento) %>% mutate(`Código Escola` = as.double(`Código Escola`)),
             by=c("Código da Escola" = "Código Escola")) %>%
@@ -554,6 +564,7 @@ dados_treino_em <- bateu_meta_23 %>% select(`Código da Escola`,`Atingiu a Meta\
 
 # ENSINO FUNDAMENTAL ANOS FINAIS ----
 dados_teste_ef <- desafios_2025 %>% select(Cod_Inep,Desafio_AF_menor) %>%
+  filter(!is.na(Desafio_AF_menor)) %>%
   left_join(crescimento_20242025[["EF_LP"]] %>% select(`Código da escola`,Crescimento) %>% rename(Crescimento_LP = Crescimento) %>% mutate(`Código da escola` = as.double(`Código da escola`)),
             by=c("Cod_Inep" = "Código da escola")) %>%
   left_join(crescimento_20242025[["EF_MT"]] %>% select(`Código da escola`,Crescimento) %>% rename(Crescimento_MT = Crescimento) %>% mutate(`Código da escola` = as.double(`Código da escola`)),
@@ -563,6 +574,7 @@ dados_teste_ef <- desafios_2025 %>% select(Cod_Inep,Desafio_AF_menor) %>%
 
 # ENSINO MÉDIO ----
 dados_teste_em <- desafios_2025 %>% select(Cod_Inep,Desafio_EM_menor) %>%
+  filter(!is.na(Desafio_EM_menor)) %>%
   left_join(crescimento_20242025[["EM_LP"]] %>% select(`Código da escola`,Crescimento) %>% rename(Crescimento_LP = Crescimento) %>% mutate(`Código da escola` = as.double(`Código da escola`)),
             by=c("Cod_Inep" = "Código da escola")) %>%
   left_join(crescimento_20242025[["EM_MT"]] %>% select(`Código da escola`,Crescimento) %>% rename(Crescimento_MT = Crescimento) %>% mutate(`Código da escola` = as.double(`Código da escola`)),
