@@ -1,20 +1,20 @@
-name: Modelagem e Dashboard
+name: Pipeline Completo (Modelagem + Dashboard)
 
 on:
   push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
+    branches: [ "main" ]
+  workflow_dispatch:      
 
 jobs:
-  # -----------------------------------------------------------------
-  # JOB 1: MODELAGEM (Gera os arquivos)
-  # -----------------------------------------------------------------
+  # ====================================================
+  # JOB 1: MODELAGEM (Gera os arquivos de dados)
+  # ====================================================
   modelagem:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        script: ["modelagemEF.R", "modelagemEM.R"]
+        script: ["modelagemEF.R", "modelagemEM.R"] 
 
     steps:
       - uses: actions/checkout@v4
@@ -33,49 +33,40 @@ jobs:
       - name: Instalar CmdStan
         if: steps.cache-cmdstan.outputs.cache-hit != 'true'
         run: |
-          mkdir -p /home/runner/.cmdstan
-          Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
-          Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
+            mkdir -p /home/runner/.cmdstan
+            Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
+            Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
 
-      - name: Instalar Dependências R (Modelagem)
+      - name: Instalar Dependências R
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          packages:
-            - any::brms
-            - any::tidyverse
-            - any::tidybayes
-            - any::recipes
-            - any::readxl
-            - any::openxlsx
-            - stan-dev/cmdstanr
+          packages: |
+            any::brms
+            any::tidyverse
+            any::tidybayes
+            any::recipes
+            any::readxl
+            stan-dev/cmdstanr
 
       - name: Rodar Modelo ${{ matrix.script }}
         run: |
           echo "CMDSTAN_PATH=/home/runner/.cmdstan/cmdstan-2.34.1" >> .Renviron
           Rscript ${{ matrix.script }}
 
-      # PACOTE 1: LEVE (Só XLSX para o App)
-      - name: Upload Dados para Deploy
+      # Salva csv ou xlsx gerados como Artefatos
+      - name: Upload Resultados
         uses: actions/upload-artifact@v4
         with:
-          name: dados-deploy-${{ matrix.script }}
-          path: *.xlsx
-
-      # PACOTE 2: PESADO (Backup completo)
-      - name: Upload Backup Completo
-        uses: actions/upload-artifact@v4
-        with:
-          name: BACKUP-COMPLETO-${{ matrix.script }}
+          name: resultados-${{ matrix.script }}
           path: |
+            *.csv
             *.xlsx
-            *.rds
-            *.rda
 
-  # -----------------------------------------------------------------
-  # JOB 2: DEPLOY (Baixa XLSX e Publica)
-  # -----------------------------------------------------------------
+  # ====================================================
+  # JOB 2: DEPLOY (Processa e Publica)
+  # ====================================================
   deploy:
-    needs: modelagem
+    needs: modelagem 
     runs-on: ubuntu-latest
     
     steps:
@@ -85,38 +76,41 @@ jobs:
         with:
           use-public-rspm: true
 
-      # Baixa APENAS os XLSX (Pacote 1)
+      # Baixa os resultados e JOGA NA RAIZ (merge-multiple é crucial aqui)
       - name: Download Resultados EF
         uses: actions/download-artifact@v4
         with:
-          name: dados-deploy-modelagemEF.R
+          name: resultados-modelagemEF.R
           path: .
-          merge-multiple: true
+          merge-multiple: true 
 
       - name: Download Resultados EM
         uses: actions/download-artifact@v4
         with:
-          name: dados-deploy-modelagemEM.R
+          name: resultados-modelagemEM.R
           path: .
           merge-multiple: true
 
-      - name: Instalar Pacotes R (Deploy)
+      # --- AQUI ESTAVA O ERRO DE INDENTAÇÃO ANTES ---
+      # Agora está alinhado corretamente dentro de 'steps'
+      
+      - name: Instalar Pacotes R (Rápido + Cache)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          packages:
-            - any::tidyverse
-            - any::readxl
-            - any::sf
-            - any::geobr
-            - any::rsconnect
-            - any::stringi
-            - any::shiny
-            - any::leaflet
-            - any::bslib
-            - any::bsicons
-            - any::shinyWidgets
-            - any::leaflet.extras
-            - any::DT
+          packages: |
+            any::tidyverse
+            any::readxl
+            any::sf
+            any::geobr
+            any::rsconnect
+            any::stringi
+            any::shiny          
+            any::leaflet        
+            any::bslib          
+            any::bsicons
+            any::shinyWidgets
+            any::leaflet.extras
+            any::DT
 
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
