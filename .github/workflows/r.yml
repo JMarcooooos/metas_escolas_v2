@@ -86,10 +86,23 @@ jobs:
           name: resultados-modelagemEM.R
           path: .
 
-      - name: Instalar Pacotes Deploy
-        run: |
-          sudo apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev # Dependências Linux para mapas
-          Rscript -e "install.packages(c('tidyverse', 'readxl', 'sf', 'geobr', 'rsconnect', 'stringi'))"
+  - name: Instalar Pacotes R (Rápido + Cache)
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::tidyverse
+            any::readxl
+            any::sf
+            any::geobr
+            any::rsconnect
+            any::stringi
+            any::shiny         
+            any::leaflet       
+            any::bslib          
+            any::bsicons
+            any::shinyWidgets
+            any::leaflet.extras
+            any::DT
 
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
