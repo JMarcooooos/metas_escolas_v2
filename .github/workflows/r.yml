@@ -114,41 +114,50 @@ jobs:
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
 
-      # Cria um script R temporário para corrigir o manifesto
-      # Isso evita erros de aspas e $ no YAML
-      - name: Corrigir Manifest.json
+      - name: Gerar e Limpar Manifest
         run: |
           cat <<EOF > fix_manifest.R
-          if(!require('jsonlite')) install.packages('jsonlite')
-          options(repos = c(CRAN = 'https://cloud.r-project.org'))
+          library(rsconnect)
 
-          # Garante que a pasta existe e limpa configs antigas
+          r <- getOption("repos")
+          r["CRAN"] <- "https://cloud.r-project.org"
+          options(repos = r)
+
           if(dir.exists('app/rsconnect')) unlink('app/rsconnect', recursive = TRUE)
 
-          # Gera o manifesto
-          rsconnect::writeManifest(
+          writeManifest(
             appDir = 'app',
             appFiles = c('app.R', 'dados_para_o_mapa.rds', 'mapa_shapes.rds')
           )
 
-          # Lê e corrige o JSON
-          manifest_path <- 'app/manifest.json'
-          manifest <- jsonlite::read_json(manifest_path)
+          library(jsonlite)
+          manifest_path <- "app/manifest.json"
+          manifest <- read_json(manifest_path)
+
+          manifest\$metadata\$repositoryURL <- "https://cloud.r-project.org"
           
-          # Remove campo Repository para forçar instalação via CRAN no shinyapps
           if(!is.null(manifest\$packages)) {
             for(i in seq_along(manifest\$packages)) {
-              manifest\$packages[[i]]\$Repository <- NULL
+               pkg <- manifest\$packages[[i]]
+
+               if(!is.null(pkg\$Repository)) {
+                 manifest\$packages[[i]]\$Repository <- "CRAN"
+               }
+               
+               if(!is.null(pkg\$Source) && (pkg\$Source == "RSPM" || pkg\$Source == "Standard")) {
+                 manifest\$packages[[i]]\$Source <- "CRAN"
+               }
+               
+               if(!is.null(pkg\$description\$Repository)) {
+                 manifest\$packages[[i]]\$description\$Repository <- "CRAN"
+               }
             }
           }
           
-          manifest\$metadata\$repositoryURL <- 'https://cloud.r-project.org'
-          
-          jsonlite::write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
-          cat('Manifesto corrigido com sucesso.\n')
+          write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
+          cat("Manifesto limpo: Todas as referências a RSPM removidas.\n")
           EOF
           
-          # Executa o script criado acima
           Rscript fix_manifest.R
 
       - name: Publicar no ShinyApps
