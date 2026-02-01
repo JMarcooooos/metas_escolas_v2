@@ -61,6 +61,8 @@ jobs:
           path: |
             *.csv
             *.xlsx
+            *.rds
+            *.rda
 
   # ====================================================
   # JOB 2: DEPLOY (Processa e Publica)
