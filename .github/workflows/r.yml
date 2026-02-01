@@ -147,7 +147,7 @@ jobs:
               "
 
       - name: Publicar no ShinyApps
-      run: Rscript deploy.R
+        run: Rscript deploy.R
       env:
         SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
         SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
