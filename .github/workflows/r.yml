@@ -123,30 +123,34 @@ jobs:
       # Bloco complexo de correção do Manifest
       - name: Forçar CRAN no manifest.json
         run: |
-          Rscript -e "
-          options(repos = c(CRAN = 'https://cloud.r-project.org'))
-          if(dir.exists('app/rsconnect')) unlink('app/rsconnect', recursive = TRUE)
-          
-          # Gera o manifesto inicial
+         Rscript -e "
+         if(!require('jsonlite')) install.packages('jsonlite')
+    
+         options(repos = c(CRAN = 'https://cloud.r-project.org'))
+    
+         unlink('app/rsconnect', recursive = TRUE)
+
           rsconnect::writeManifest(
             appDir = 'app',
             appFiles = c('app.R', 'dados_para_o_mapa.rds', 'mapa_shapes.rds')
           )
-          
-          # Edita o JSON para trocar RSPM por CRAN
+ 
           manifest_path <- 'app/manifest.json'
-          if(file.exists(manifest_path)) {
-            manifest <- jsonlite::read_json(manifest_path)
-            if(!is.null(manifest\$packages)) {
-              for(i in seq_along(manifest\$packages)) {
-                if(!is.null(manifest\$packages[[i]]\$Repository)) {
-                  manifest\$packages[[i]]\$Repository <- 'https://cloud.r-project.org'
-                }
-              }
+          manifest <- jsonlite::read_json(manifest_path)
+          
+          if(!is.null(manifest\$packages)) {
+            for(i in seq_along(manifest\$packages)) {
+              # Remove o campo Repository completamente
+              manifest\$packages[[i]]\$Repository <- NULL
             }
-            jsonlite::write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
-            message('✅ manifest.json corrigido com CRAN!')
           }
+          
+          manifest\$metadata\$repositoryURL <- 'https://cloud.r-project.org'
+
+          jsonlite::write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
+
+          cat('\n=== MANIFEST CORRIGIDO ===\n')
+          cat(readLines(manifest_path), sep = '\n')
           "
 
       - name: Publicar no ShinyApps
