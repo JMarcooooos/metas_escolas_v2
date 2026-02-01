@@ -592,6 +592,30 @@ names(dados_teste_ef) <- c("CD_ESCOLA","DESAFIO_AF_MENOR","CRESCIMENTO_LP","CRES
 names(dados_treino_em) <- c("CD_ESCOLA","Y","DESAFIO_EM_MENOR","CRESCIMENTO_LP","CRESCIMENTO_MT","CRESCIMENTO_MEDIO_ANUAL_IDEB","IP")
 names(dados_teste_em) <- c("CD_ESCOLA","DESAFIO_EM_MENOR","CRESCIMENTO_LP","CRESCIMENTO_MT","CRESCIMENTO_MEDIO_ANUAL_IDEB","IP")
 
-rm(list=setdiff(ls(),c("dados_treino_ef","dados_teste_ef","dados_treino_em","dados_teste_em")))
+# Acrescentando NM_MUNICIPIO e NM_REGIONAL ----
 
+dados_regmun <- readxl::read_excel("Bases/Metas para Ideb 2025 - Versão Final.xlsx",skip=8) %>%
+  select(Regional, Município, Cod_Inep)
+
+# EF
+dados_treino_ef <- dados_treino_ef %>%
+  left_join(dados_regmun,by=c("CD_ESCOLA" = "Cod_Inep"))
+names(dados_treino_ef)[c(8,9)] <- c("NM_REGIONAL","NM_MUNICIPIO")
+
+dados_teste_ef <- dados_teste_ef %>%
+  left_join(dados_regmun,by=c("CD_ESCOLA" = "Cod_Inep"))
+names(dados_teste_ef)[c(7,8)] <- c("NM_REGIONAL","NM_MUNICIPIO")
+
+# EM
+dados_treino_em <- dados_treino_em %>%
+  left_join(dados_regmun,by=c("CD_ESCOLA" = "Cod_Inep"))
+names(dados_treino_em)[c(8,9)] <- c("NM_REGIONAL","NM_MUNICIPIO")
+
+dados_teste_em <- dados_teste_em %>%
+  left_join(dados_regmun,by=c("CD_ESCOLA" = "Cod_Inep"))
+names(dados_teste_em)[c(7,8)] <- c("NM_REGIONAL","NM_MUNICIPIO")
+
+# Salvando ----
+
+rm(list=setdiff(ls(),c("dados_treino_ef","dados_teste_ef","dados_treino_em","dados_teste_em")))
 save.image("bases_para_modelagem.RData")
