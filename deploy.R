@@ -1,8 +1,4 @@
 # deploy.R
-
-options(repos = c(CRAN = "https://cloud.r-project.org"))
-
-library(rsconnect)
 library(shiny)
 library(leaflet)
 library(bslib)
@@ -12,21 +8,30 @@ library(leaflet.extras)
 library(DT)
 library(sf)
 
-message("--- CORRIGINDO METADADOS DO BSICONS ---")
-install.packages("bsicons", repos = "https://cloud.r-project.org")
-install.packages("bslib", repos = "https://cloud.r-project.org")
+# deploy.R
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+library(rsconnect)
 
+# Remove cache antigo
+unlink("app/rsconnect", recursive = TRUE)
+
+# Força criação de novo manifest
+writeManifest(
+  appDir = "app",
+  appFiles = c("app.R", "dados_para_o_mapa.rds", "mapa_shapes.rds")
+)
+
+# Configura conta
 setAccountInfo(
   name   = Sys.getenv("SHINY_ACC_NAME"),
   token  = Sys.getenv("SHINY_TOKEN"),
   secret = Sys.getenv("SHINY_SECRET")
 )
 
-message("Iniciando deploy com repositório forçado: ", getOption("repos"))
-
+# Deploy
 deployApp(
-  appDir = "app", 
-  appName = "monitoramento-metas-goias", 
+  appDir = "app",
+  appName = "monitoramento-metas-goias",
   forceUpdate = TRUE,
   launch.browser = FALSE
 )
