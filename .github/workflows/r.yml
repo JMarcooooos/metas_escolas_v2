@@ -7,7 +7,7 @@ on:
 
 jobs:
   # ====================================================
-  # JOB 1: MODELAGEM
+  # JOB 1: MODELAGEM (MANTEMOS UBUNTU AQUI - É RÁPIDO P/ STAN)
   # ====================================================
   modelagem:
     runs-on: ubuntu-latest
@@ -64,18 +64,20 @@ jobs:
             *.rda
 
   # ====================================================
-  # JOB 2: DEPLOY (A MÁGICA ACONTECE AQUI)
+  # JOB 2: DEPLOY (MUDANÇA PARA WINDOWS)
   # ====================================================
   deploy:
     needs: modelagem 
-    runs-on: ubuntu-latest
+    # AQUI ESTÁ O TRUQUE: MUDAMOS PARA WINDOWS
+    runs-on: windows-latest
     
     steps:
       - uses: actions/checkout@v4
 
       - uses: r-lib/actions/setup-r@v2
         with:
-          use-public-rspm: true
+          # No Windows, isso padrão já é CRAN. RSPM não é usado igual no Linux.
+          r-version: 'release'
 
       - name: Download Resultados EF
         uses: actions/download-artifact@v4
@@ -91,7 +93,9 @@ jobs:
           path: .
           merge-multiple: true
       
-      - name: Instalar Pacotes R (Sistema + SF)
+      # No Windows, setup-r-dependencies baixa binários do CRAN automaticamente.
+      # Não precisamos instalar libgdal, libgeos, etc. Já vem tudo pronto!
+      - name: Instalar Pacotes R (Binários Windows)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -112,44 +116,11 @@ jobs:
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
 
-      # ==================================================================
-      # PASSO CRUCIAL: SANITIZAR PACOTES INSTALADOS
-      # Isso engana o rsconnect fazendo ele achar que tudo veio do CRAN
-      # ==================================================================
-      - name: Hackear Descrição dos Pacotes
-        run: |
-          Rscript -e "
-            # Lista de pacotes que costumam dar problema com RSPM
-            pkgs_to_fix <- c('sf', 'geobr', 'leaflet', 'units', 'classInt', 's2')
-            
-            lib_loc <- .libPaths()[1]
-            
-            for (pkg in pkgs_to_fix) {
-              desc_path <- file.path(lib_loc, pkg, 'DESCRIPTION')
-              
-              if (file.exists(desc_path)) {
-                d <- read.dcf(desc_path)
-                
-                # Se tiver Repository: RSPM, muda para CRAN
-                if ('Repository' %in% colnames(d)) {
-                  d[1, 'Repository'] <- 'CRAN'
-                  write.dcf(d, file = desc_path)
-                  message(paste('Corrigido Repository para CRAN em:', pkg))
-                }
-                
-                # Remove RemoteType se existir (causa confusão tbm)
-                # Não é fácil remover linha com read.dcf, então vamos ler como texto
-                lines <- readLines(desc_path)
-                lines <- lines[!grepl('^Remote', lines)] # Remove linhas de instalação remota
-                writeLines(lines, desc_path)
-              }
-            }
-          "
-
+      # Configuração final e Deploy
       - name: Publicar no ShinyApps
+        # Shell bash explícito para garantir compatibilidade de sintaxe
+        shell: bash
         run: |
-          # FORÇA O AMBIENTE A USAR CRAN ANTES DE RODAR O DEPLOY
-          echo 'options(repos = c(CRAN = "https://cloud.r-project.org"))' >> ~/.Rprofile
           Rscript deploy.R
         env:
           SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
