@@ -86,7 +86,7 @@ jobs:
           name: resultados-modelagemEM.R
           path: .
 
-  - name: Instalar Pacotes R (Rápido + Cache)
+      - name: Instalar Pacotes R (Rápido + Cache)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
