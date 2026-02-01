@@ -3,7 +3,7 @@ name: Pipeline Completo (Modelagem + Dashboard)
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:      
+  workflow_dispatch:
 
 jobs:
   # ====================================================
@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        script: ["modelagemEF.R", "modelagemEM.R"] 
+        script: ["modelagemEF.R", "modelagemEM.R"]
 
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +53,7 @@ jobs:
           echo "CMDSTAN_PATH=/home/runner/.cmdstan/cmdstan-2.34.1" >> .Renviron
           Rscript ${{ matrix.script }}
 
-      # Salva csv ou xlsx gerados como Artefatos
+      # Salva arquivos gerados como Artefatos
       - name: Upload Resultados
         uses: actions/upload-artifact@v4
         with:
@@ -66,6 +66,7 @@ jobs:
             
       - name: Force CRAN repo
         run: |
+          mkdir -p app
           echo 'options(repos = c(CRAN = "https://cloud.r-project.org"))' > app/.Rprofile
 
   # ====================================================
@@ -82,7 +83,7 @@ jobs:
         with:
           use-public-rspm: true
 
-      # Baixa os resultados e JOGA NA RAIZ (merge-multiple é crucial aqui)
+      # Baixa os resultados
       - name: Download Resultados EF
         uses: actions/download-artifact@v4
         with:
@@ -96,7 +97,6 @@ jobs:
           name: resultados-modelagemEM.R
           path: .
           merge-multiple: true
-
       
       - name: Instalar Pacotes R (Rápido + Cache)
         uses: r-lib/actions/setup-r-dependencies@v2
@@ -115,40 +115,43 @@ jobs:
             any::shinyWidgets
             any::leaflet.extras
             any::DT
+            any::jsonlite
 
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
 
+      # Bloco complexo de correção do Manifest
       - name: Forçar CRAN no manifest.json
         run: |
           Rscript -e "
           options(repos = c(CRAN = 'https://cloud.r-project.org'))
-              unlink('app/rsconnect', recursive = TRUE)
-              rsconnect::writeManifest(
-                appDir = 'app',
-                appFiles = c('app.R', 'dados_para_o_mapa.rds', 'mapa_shapes.rds')
-              )
-    
-              manifest_path <- 'app/manifest.json'
-              if(file.exists(manifest_path)) {
-                manifest <- jsonlite::read_json(manifest_path)
-      
-               if(!is.null(manifest\$packages)) {
-                 for(i in seq_along(manifest\$packages)) {
-                   if(!is.null(manifest\$packages[[i]]\$Repository)) {
-                     manifest\$packages[[i]]\$Repository <- 'https://cloud.r-project.org'
-                   }
-                 }
-               }
-      
-               jsonlite::write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
-               message('✅ manifest.json corrigido com CRAN!')
+          if(dir.exists('app/rsconnect')) unlink('app/rsconnect', recursive = TRUE)
+          
+          # Gera o manifesto inicial
+          rsconnect::writeManifest(
+            appDir = 'app',
+            appFiles = c('app.R', 'dados_para_o_mapa.rds', 'mapa_shapes.rds')
+          )
+          
+          # Edita o JSON para trocar RSPM por CRAN
+          manifest_path <- 'app/manifest.json'
+          if(file.exists(manifest_path)) {
+            manifest <- jsonlite::read_json(manifest_path)
+            if(!is.null(manifest\$packages)) {
+              for(i in seq_along(manifest\$packages)) {
+                if(!is.null(manifest\$packages[[i]]\$Repository)) {
+                  manifest\$packages[[i]]\$Repository <- 'https://cloud.r-project.org'
+                }
               }
-              "
+            }
+            jsonlite::write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
+            message('✅ manifest.json corrigido com CRAN!')
+          }
+          "
 
       - name: Publicar no ShinyApps
         run: Rscript deploy.R
-      env:
-        SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
-        SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
-        SHINY_SECRET: ${{ secrets.SHINY_SECRET }}
+        env:
+          SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
+          SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
+          SHINY_SECRET: ${{ secrets.SHINY_SECRET }}
