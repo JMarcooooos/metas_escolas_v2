@@ -1,4 +1,4 @@
-name: Pipeline Completo (Modelagem + Dashboard)
+name: Metas Escolas
 
 on:
   push:
@@ -33,9 +33,9 @@ jobs:
       - name: Instalar CmdStan
         if: steps.cache-cmdstan.outputs.cache-hit != 'true'
         run: |
-            mkdir -p /home/runner/.cmdstan
-            Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
-            Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
+          mkdir -p /home/runner/.cmdstan
+          Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
+          Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
 
       - name: Instalar Dependências R
         uses: r-lib/actions/setup-r-dependencies@v2
@@ -63,36 +63,7 @@ jobs:
             *.xlsx
             *.rds
             *.rda
-            
-      - name: Forçar CRAN no manifest.json
-        run: |
-          Rscript -e "
-          if(!require('jsonlite')) install.packages('jsonlite')
-          options(repos = c(CRAN = 'https://cloud.r-project.org'))
-          
-          # Gera o manifesto
-          rsconnect::writeManifest(
-            appDir = 'app',
-            appFiles = c('app.R', 'dados_para_o_mapa.rds', 'mapa_shapes.rds')
-          )
-          
-          # Corrige o manifesto
-          manifest_path <- 'app/manifest.json'
-          manifest <- jsonlite::read_json(manifest_path)
-          
-          # Remove o campo Repository de todos os pacotes
-          if(!is.null(manifest\$packages)) {
-            for(i in seq_along(manifest\$packages)) {
-              manifest\$packages[[i]]\$Repository <- NULL
-            }
-          }
-          
-          # Define o repositório global como CRAN
-          manifest\$metadata\$repositoryURL <- 'https://cloud.r-project.org'
-          
-          jsonlite::write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
-          "
-          
+
   # ====================================================
   # JOB 2: DEPLOY (Processa e Publica)
   # ====================================================
@@ -107,7 +78,7 @@ jobs:
         with:
           use-public-rspm: true
 
-      # Baixa os resultados
+      # Baixa os resultados e mistura tudo na raiz
       - name: Download Resultados EF
         uses: actions/download-artifact@v4
         with:
@@ -122,7 +93,7 @@ jobs:
           path: .
           merge-multiple: true
       
-      - name: Instalar Pacotes R (Rápido + Cache)
+      - name: Instalar Pacotes R (incluindo Dependencias do SF)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -132,8 +103,8 @@ jobs:
             any::geobr
             any::rsconnect
             any::stringi
-            any::shiny          
-            any::leaflet        
+            any::shiny           
+            any::leaflet         
             any::bslib  
             any::shinyWidgets
             any::leaflet.extras
@@ -143,38 +114,42 @@ jobs:
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
 
-      # Bloco complexo de correção do Manifest
-      - name: Forçar CRAN no manifest.json
+      # Cria um script R temporário para corrigir o manifesto
+      # Isso evita erros de aspas e $ no YAML
+      - name: Corrigir Manifest.json
         run: |
-         Rscript -e "
-         if(!require('jsonlite')) install.packages('jsonlite')
-    
-         options(repos = c(CRAN = 'https://cloud.r-project.org'))
-    
-         unlink('app/rsconnect', recursive = TRUE)
+          cat <<EOF > fix_manifest.R
+          if(!require('jsonlite')) install.packages('jsonlite')
+          options(repos = c(CRAN = 'https://cloud.r-project.org'))
 
+          # Garante que a pasta existe e limpa configs antigas
+          if(dir.exists('app/rsconnect')) unlink('app/rsconnect', recursive = TRUE)
+
+          # Gera o manifesto
           rsconnect::writeManifest(
             appDir = 'app',
             appFiles = c('app.R', 'dados_para_o_mapa.rds', 'mapa_shapes.rds')
           )
- 
+
+          # Lê e corrige o JSON
           manifest_path <- 'app/manifest.json'
           manifest <- jsonlite::read_json(manifest_path)
           
+          # Remove campo Repository para forçar instalação via CRAN no shinyapps
           if(!is.null(manifest\$packages)) {
             for(i in seq_along(manifest\$packages)) {
-              # Remove o campo Repository completamente
               manifest\$packages[[i]]\$Repository <- NULL
             }
           }
           
           manifest\$metadata\$repositoryURL <- 'https://cloud.r-project.org'
-
+          
           jsonlite::write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
-
-          cat('\n=== MANIFEST CORRIGIDO ===\n')
-          cat(readLines(manifest_path), sep = '\n')
-          "
+          cat('Manifesto corrigido com sucesso.\n')
+          EOF
+          
+          # Executa o script criado acima
+          Rscript fix_manifest.R
 
       - name: Publicar no ShinyApps
         run: Rscript deploy.R
