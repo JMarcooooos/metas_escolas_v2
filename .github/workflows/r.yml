@@ -52,14 +52,22 @@ jobs:
           echo "CMDSTAN_PATH=/home/runner/.cmdstan/cmdstan-2.34.1" >> .Renviron
           Rscript ${{ matrix.script }}
 
-      # Salva os .xlsx gerados como Artefatos para o próximo Job
-      - name: Upload Resultados
+# PACOTE 1
+      - name: Upload Dados para Deploy
         uses: actions/upload-artifact@v4
         with:
-          name: resultados-${{ matrix.script }}
+          name: dados-deploy-${{ matrix.script }} 
+          path: *.xlsx
+
+# PACOTE 2: Arquivos para você baixar (Pesado)
+      - name: Upload Modelos Completos (Backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: BACKUP-COMPLETO-${{ matrix.script }}
           path: |
-            *.csv
             *.xlsx
+            *.rds
+            *.rda
 
   # (Gera RDS e Publica)
 
@@ -77,14 +85,16 @@ jobs:
       - name: Download Resultados EF
         uses: actions/download-artifact@v4
         with:
-          name: resultados-modelagemEF.R
+          name: dados-deploy-modelagemEF.R
           path: .
+          merge-multiple: true
 
       - name: Download Resultados EM
         uses: actions/download-artifact@v4
         with:
-          name: resultados-modelagemEM.R
+          name: dados-deploy-modelagemEM.R
           path: .
+          merge-multiple: true
 
       - name: Instalar Pacotes R (Rápido + Cache)
         uses: r-lib/actions/setup-r-dependencies@v2
