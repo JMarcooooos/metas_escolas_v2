@@ -7,7 +7,7 @@ on:
 
 jobs:
   # ====================================================
-  # JOB 1: MODELAGEM (Gera os arquivos de dados)
+  # JOB 1: MODELAGEM
   # ====================================================
   modelagem:
     runs-on: ubuntu-latest
@@ -53,7 +53,6 @@ jobs:
           echo "CMDSTAN_PATH=/home/runner/.cmdstan/cmdstan-2.34.1" >> .Renviron
           Rscript ${{ matrix.script }}
 
-      # Salva arquivos gerados como Artefatos
       - name: Upload Resultados
         uses: actions/upload-artifact@v4
         with:
@@ -65,7 +64,7 @@ jobs:
             *.rda
 
   # ====================================================
-  # JOB 2: DEPLOY (Processa e Publica)
+  # JOB 2: DEPLOY (A MÁGICA ACONTECE AQUI)
   # ====================================================
   deploy:
     needs: modelagem 
@@ -78,7 +77,6 @@ jobs:
         with:
           use-public-rspm: true
 
-      # Baixa os resultados e mistura tudo na raiz
       - name: Download Resultados EF
         uses: actions/download-artifact@v4
         with:
@@ -93,7 +91,7 @@ jobs:
           path: .
           merge-multiple: true
       
-      - name: Instalar Pacotes R (incluindo Dependencias do SF)
+      - name: Instalar Pacotes R (Sistema + SF)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -114,54 +112,45 @@ jobs:
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
 
-      - name: Gerar e Limpar Manifest
+      # ==================================================================
+      # PASSO CRUCIAL: SANITIZAR PACOTES INSTALADOS
+      # Isso engana o rsconnect fazendo ele achar que tudo veio do CRAN
+      # ==================================================================
+      - name: Hackear Descrição dos Pacotes
         run: |
-          cat <<EOF > fix_manifest.R
-          library(rsconnect)
-
-          r <- getOption("repos")
-          r["CRAN"] <- "https://cloud.r-project.org"
-          options(repos = r)
-
-          if(dir.exists('app/rsconnect')) unlink('app/rsconnect', recursive = TRUE)
-
-          writeManifest(
-            appDir = 'app',
-            appFiles = c('app.R', 'dados_para_o_mapa.rds', 'mapa_shapes.rds')
-          )
-
-          library(jsonlite)
-          manifest_path <- "app/manifest.json"
-          manifest <- read_json(manifest_path)
-
-          manifest\$metadata\$repositoryURL <- "https://cloud.r-project.org"
-          
-          if(!is.null(manifest\$packages)) {
-            for(i in seq_along(manifest\$packages)) {
-               pkg <- manifest\$packages[[i]]
-
-               if(!is.null(pkg\$Repository)) {
-                 manifest\$packages[[i]]\$Repository <- "CRAN"
-               }
-               
-               if(!is.null(pkg\$Source) && (pkg\$Source == "RSPM" || pkg\$Source == "Standard")) {
-                 manifest\$packages[[i]]\$Source <- "CRAN"
-               }
-               
-               if(!is.null(pkg\$description\$Repository)) {
-                 manifest\$packages[[i]]\$description\$Repository <- "CRAN"
-               }
+          Rscript -e "
+            # Lista de pacotes que costumam dar problema com RSPM
+            pkgs_to_fix <- c('sf', 'geobr', 'leaflet', 'units', 'classInt', 's2')
+            
+            lib_loc <- .libPaths()[1]
+            
+            for (pkg in pkgs_to_fix) {
+              desc_path <- file.path(lib_loc, pkg, 'DESCRIPTION')
+              
+              if (file.exists(desc_path)) {
+                d <- read.dcf(desc_path)
+                
+                # Se tiver Repository: RSPM, muda para CRAN
+                if ('Repository' %in% colnames(d)) {
+                  d[1, 'Repository'] <- 'CRAN'
+                  write.dcf(d, file = desc_path)
+                  message(paste('Corrigido Repository para CRAN em:', pkg))
+                }
+                
+                # Remove RemoteType se existir (causa confusão tbm)
+                # Não é fácil remover linha com read.dcf, então vamos ler como texto
+                lines <- readLines(desc_path)
+                lines <- lines[!grepl('^Remote', lines)] # Remove linhas de instalação remota
+                writeLines(lines, desc_path)
+              }
             }
-          }
-          
-          write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
-          cat("Manifesto limpo: Todas as referências a RSPM removidas.\n")
-          EOF
-          
-          Rscript fix_manifest.R
+          "
 
       - name: Publicar no ShinyApps
-        run: Rscript deploy.R
+        run: |
+          # FORÇA O AMBIENTE A USAR CRAN ANTES DE RODAR O DEPLOY
+          echo 'options(repos = c(CRAN = "https://cloud.r-project.org"))' >> ~/.Rprofile
+          Rscript deploy.R
         env:
           SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
           SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
