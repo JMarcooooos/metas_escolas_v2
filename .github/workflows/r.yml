@@ -6,9 +6,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ====================================================
-  # JOB 1: MODELAGEM (MANTEMOS UBUNTU AQUI - É RÁPIDO P/ STAN)
-  # ====================================================
   modelagem:
     runs-on: ubuntu-latest
     strategy:
@@ -63,21 +60,16 @@ jobs:
             *.rds
             *.rda
 
-  # ====================================================
-  # JOB 2: DEPLOY (MUDANÇA PARA WINDOWS)
-  # ====================================================
   deploy:
     needs: modelagem 
-    # AQUI ESTÁ O TRUQUE: MUDAMOS PARA WINDOWS
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     
     steps:
       - uses: actions/checkout@v4
 
       - uses: r-lib/actions/setup-r@v2
         with:
-          # No Windows, isso padrão já é CRAN. RSPM não é usado igual no Linux.
-          r-version: 'release'
+          use-public-rspm: true # VOLTAMOS PARA O PADRÃO RÁPIDO
 
       - name: Download Resultados EF
         uses: actions/download-artifact@v4
@@ -93,9 +85,7 @@ jobs:
           path: .
           merge-multiple: true
       
-      # No Windows, setup-r-dependencies baixa binários do CRAN automaticamente.
-      # Não precisamos instalar libgdal, libgeos, etc. Já vem tudo pronto!
-      - name: Instalar Pacotes R (Binários Windows)
+      - name: Instalar Pacotes R
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -116,12 +106,62 @@ jobs:
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
 
-      # Configuração final e Deploy
-      - name: Publicar no ShinyApps
-        # Shell bash explícito para garantir compatibilidade de sintaxe
-        shell: bash
+      # ==================================================================
+      # A SOLUÇÃO DEFINITIVA: SANITIZAÇÃO DO MANIFESTO
+      # ==================================================================
+      - name: Deploy com Correção de Manifesto
         run: |
-          Rscript deploy.R
+          # Cria um script R customizado para fazer o deploy passo-a-passo
+          cat <<EOF > custom_deploy.R
+          library(rsconnect)
+          library(jsonlite)
+          
+          # 1. Configura Conta
+          setAccountInfo(
+            name = Sys.getenv("SHINY_ACC_NAME"),
+            token = Sys.getenv("SHINY_TOKEN"),
+            secret = Sys.getenv("SHINY_SECRET")
+          )
+          
+          # 2. Gera Manifesto (com erro de RSPM)
+          # Precisamos gerar o manifesto MANUALMENTE primeiro para poder corrigir
+          writeManifest(appDir = "app", appFiles = c("app.R", "dados_para_o_mapa.rds", "mapa_shapes.rds"))
+          
+          # 3. Lê e Corrige o Manifesto
+          manifest <- read_json("app/manifest.json")
+          
+          # Força o repositório CRAN oficial
+          manifest\$metadata\$repositoryURL <- "https://cloud.r-project.org"
+          
+          # Varre todos os pacotes e remove qualquer rastro de Source ou Repository
+          # Isso força o shinyapps.io a baixar do CRAN padrão dele
+          if(!is.null(manifest\$packages)) {
+            for(i in seq_along(manifest\$packages)) {
+               # Remove Source e Repository para forçar padrão CRAN
+               manifest\$packages[[i]]\$Source <- NULL
+               manifest\$packages[[i]]\$Repository <- NULL
+               
+               # Se tiver descrição, limpa também
+               if(!is.null(manifest\$packages[[i]]\$description)) {
+                 manifest\$packages[[i]]\$description\$Repository <- NULL
+                 manifest\$packages[[i]]\$description\$RemoteType <- NULL
+                 manifest\$packages[[i]]\$description\$RemoteHost <- NULL
+                 manifest\$packages[[i]]\$description\$RemoteRepo <- NULL
+               }
+            }
+          }
+          
+          # Salva o manifesto limpo
+          write_json(manifest, "app/manifest.json", auto_unbox = TRUE, pretty = TRUE)
+          message("Manifesto sanitizado com sucesso!")
+          
+          # 4. Faz o Deploy usando o manifesto já existente
+          # O segredo é não deixar o deployApp gerar um novo manifesto
+          deployApp(appDir = "app", appName = "NOME_DO_SEU_APP_AQUI_SE_PRECISAR", forceUpdate = TRUE)
+          EOF
+          
+          # Roda o script
+          Rscript custom_deploy.R
         env:
           SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
           SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
