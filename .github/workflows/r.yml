@@ -97,8 +97,6 @@ jobs:
           path: .
           merge-multiple: true
 
-      # --- AQUI ESTAVA O ERRO DE INDENTAÇÃO ANTES ---
-      # Agora está alinhado corretamente dentro de 'steps'
       
       - name: Instalar Pacotes R (Rápido + Cache)
         uses: r-lib/actions/setup-r-dependencies@v2
@@ -121,9 +119,36 @@ jobs:
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
 
+      - name: Forçar CRAN no manifest.json
+        run: |
+          Rscript -e "
+          options(repos = c(CRAN = 'https://cloud.r-project.org'))
+              unlink('app/rsconnect', recursive = TRUE)
+              rsconnect::writeManifest(
+                appDir = 'app',
+                appFiles = c('app.R', 'dados_para_o_mapa.rds', 'mapa_shapes.rds')
+              )
+    
+              manifest_path <- 'app/manifest.json'
+              if(file.exists(manifest_path)) {
+                manifest <- jsonlite::read_json(manifest_path)
+      
+               if(!is.null(manifest\$packages)) {
+                 for(i in seq_along(manifest\$packages)) {
+                   if(!is.null(manifest\$packages[[i]]\$Repository)) {
+                     manifest\$packages[[i]]\$Repository <- 'https://cloud.r-project.org'
+                   }
+                 }
+               }
+      
+               jsonlite::write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
+               message('✅ manifest.json corrigido com CRAN!')
+              }
+              "
+
       - name: Publicar no ShinyApps
-        run: Rscript deploy.R
-        env:
-          SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
-          SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
-          SHINY_SECRET: ${{ secrets.SHINY_SECRET }}
+      run: Rscript deploy.R
+      env:
+        SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
+        SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
+        SHINY_SECRET: ${{ secrets.SHINY_SECRET }}
