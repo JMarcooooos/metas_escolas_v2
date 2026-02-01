@@ -40,14 +40,14 @@ jobs:
       - name: Instalar Dependências R (Modelagem)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          packages: |
-            any::brms
-            any::tidyverse
-            any::tidybayes
-            any::recipes
-            any::readxl
-            any::writexl
-            stan-dev/cmdstanr
+          packages:
+            - any::brms
+            - any::tidyverse
+            - any::tidybayes
+            - any::recipes
+            - any::readxl
+            - any::openxlsx
+            - stan-dev/cmdstanr
 
       - name: Rodar Modelo ${{ matrix.script }}
         run: |
@@ -103,20 +103,20 @@ jobs:
       - name: Instalar Pacotes R (Deploy)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          packages: |
-            any::tidyverse
-            any::readxl
-            any::sf
-            any::geobr
-            any::rsconnect
-            any::stringi
-            any::shiny          
-            any::leaflet        
-            any::bslib          
-            any::bsicons
-            any::shinyWidgets
-            any::leaflet.extras
-            any::DT
+          packages:
+            - any::tidyverse
+            - any::readxl
+            - any::sf
+            - any::geobr
+            - any::rsconnect
+            - any::stringi
+            - any::shiny
+            - any::leaflet
+            - any::bslib
+            - any::bsicons
+            - any::shinyWidgets
+            - any::leaflet.extras
+            - any::DT
 
       - name: Gerar Bases para o App
         run: Rscript bases_shiny.R
