@@ -64,11 +64,35 @@ jobs:
             *.rds
             *.rda
             
-      - name: Force CRAN repo
+      - name: Forçar CRAN no manifest.json
         run: |
-          mkdir -p app
-          echo 'options(repos = c(CRAN = "https://cloud.r-project.org"))' > app/.Rprofile
-
+          Rscript -e "
+          if(!require('jsonlite')) install.packages('jsonlite')
+          options(repos = c(CRAN = 'https://cloud.r-project.org'))
+          
+          # Gera o manifesto
+          rsconnect::writeManifest(
+            appDir = 'app',
+            appFiles = c('app.R', 'dados_para_o_mapa.rds', 'mapa_shapes.rds')
+          )
+          
+          # Corrige o manifesto
+          manifest_path <- 'app/manifest.json'
+          manifest <- jsonlite::read_json(manifest_path)
+          
+          # Remove o campo Repository de todos os pacotes
+          if(!is.null(manifest\$packages)) {
+            for(i in seq_along(manifest\$packages)) {
+              manifest\$packages[[i]]\$Repository <- NULL
+            }
+          }
+          
+          # Define o repositório global como CRAN
+          manifest\$metadata\$repositoryURL <- 'https://cloud.r-project.org'
+          
+          jsonlite::write_json(manifest, manifest_path, auto_unbox = TRUE, pretty = TRUE)
+          "
+          
   # ====================================================
   # JOB 2: DEPLOY (Processa e Publica)
   # ====================================================

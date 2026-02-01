@@ -9,7 +9,7 @@ setAccountInfo(
   secret = Sys.getenv("SHINY_SECRET")
 )
 
-# Deploy (o manifest já foi criado no step anterior)
+# Deploy
 deployApp(
   appDir = "app",
   appName = "monitoramento-metas-goias",

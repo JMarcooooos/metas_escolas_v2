@@ -7,13 +7,15 @@ library(DT)
 library(bslib)
 library(shinyWidgets)
 library(htmltools)
+library(shinyjs)
+library(bsicons)
 
 # ==============================================================================
-# 1. CARREGAMENTO DE DADOS
+# 1. CARREGAMENTO DE DADOS (MANTIDO INTACTO)
 # ==============================================================================
 
-dados_mapa <- readRDS("dados_para_o_mapa.rds")
-shapes     <- readRDS("mapa_shapes.rds")
+dados_mapa <- readRDS("app/dados_para_o_mapa.rds")
+shapes     <- readRDS("app/mapa_shapes.rds")
 
 shape_estado <- shapes$estado
 shape_munis  <- shapes$municipios
@@ -22,682 +24,440 @@ lista_regionais <- sort(unique(dados_mapa$NM_REGIONAL))
 lista_status    <- sort(unique(dados_mapa$CLASSIFICACAO))
 
 # ==============================================================================
-# 2. TEMA FUTURISTA CUSTOMIZADO
+# 2. CSS DINÂMICO (COM CORREÇÃO DE SCROLLBAR)
 # ==============================================================================
 
-tema_futurista <- bs_theme(
-  version = 5,
-  bg = "#0a0e27",
-  fg = "#e0e7ff",
-  primary = "#6366f1",
-  secondary = "#8b5cf6",
-  success = "#10b981",
-  danger = "#ef4444",
-  warning = "#f59e0b",
-  info = "#06b6d4",
-  base_font = font_google("Space Grotesk"),
-  heading_font = font_google("Orbitron"),
-  code_font = font_google("Fira Code")
-)
+css_dinamico <- "
+:root {
+  --transition-speed: 0.3s;
+}
 
-# ==============================================================================
-# 3. CSS INLINE FUTURISTA
-# ==============================================================================
+/* --- DEFINIÇÃO DAS CORES (MODO ESCURO) --- */
+body.dark-mode {
+  --bg-body: #0f172a;
+  --bg-sidebar: rgba(15, 23, 42, 0.95);
+  --bg-card: rgba(30, 41, 59, 0.6);
+  --border-color: rgba(255, 255, 255, 0.15);
+  --text-primary: #f8fafc;        
+  --text-secondary: #94a3b8;      
+  --input-bg: rgba(15, 23, 42, 0.8);
+  --accent: #a78bfa;              
+  --table-hover: rgba(139, 92, 246, 0.15);
+  
+  /* Cores da Scrollbar Dark */
+  --sb-track: #0f172a;
+  --sb-thumb: #475569;
+  --sb-thumb-hover: #a78bfa;
+}
 
-css_futurista <- "
-/* Background animado com gradiente */
+/* --- DEFINIÇÃO DAS CORES (MODO CLARO) --- */
+body.light-mode {
+  --bg-body: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --border-color: #cbd5e1;
+  --text-primary: #1e293b;        
+  --text-secondary: #475569;      
+  --input-bg: #f1f5f9;
+  --accent: #6366f1;              
+  --table-hover: rgba(99, 102, 241, 0.1);
+  
+  /* Cores da Scrollbar Light */
+  --sb-track: #e2e8f0;
+  --sb-thumb: #94a3b8;
+  --sb-thumb-hover: #6366f1;
+}
+
+/* --- APLICAÇÃO GLOBAL --- */
 body {
-  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f172a 100%);
-  background-attachment: fixed;
-  font-family: 'Space Grotesk', sans-serif;
+  background-color: var(--bg-body) !important;
+  color: var(--text-primary) !important;
+  font-family: 'Inter', sans-serif;
+  transition: background-color var(--transition-speed), color var(--transition-speed);
 }
 
-/* Efeito glassmorphism nos cards */
-.card {
-  background: rgba(255, 255, 255, 0.03) !important;
-  backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 20px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
-  transition: all 0.3s ease !important;
+/* --- SCROLLBARS (Forçando aplicação em tudo) --- */
+/* Funciona no Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background-color: var(--sb-track);
 }
 
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 40px rgba(99, 102, 241, 0.3) !important;
+*::-webkit-scrollbar-track {
+  background-color: var(--sb-track);
+  border-radius: 4px;
 }
 
-.card-header {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2)) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  font-family: 'Orbitron', sans-serif !important;
+*::-webkit-scrollbar-thumb {
+  background-color: var(--sb-thumb);
+  border-radius: 6px;
+  border: 2px solid var(--sb-track);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sb-thumb-hover);
+}
+
+/* --- FORÇAR CORES NOS TÍTULOS E LABELS --- */
+.control-label, label, .shiny-input-container label {
+  color: var(--text-primary) !important;
   font-weight: 700 !important;
-  letter-spacing: 1px !important;
-  color: #e0e7ff !important;
-  padding: 1rem 1.5rem !important;
-  border-radius: 20px 20px 0 0 !important;
+  transition: color var(--transition-speed);
 }
 
-/* Sidebar futurista */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary) !important;
+  transition: color var(--transition-speed);
+}
+.dynamic-subtitle {
+  color: var(--accent) !important;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+/* Legenda da Caixa de Modo Escuro */
+.material-switch label {
+  color: var(--text-primary) !important;
+}
+
+/* --- SIDEBAR --- */
 .bslib-sidebar-layout > .sidebar {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95)) !important;
-  backdrop-filter: blur(20px) !important;
-  border-right: 2px solid rgba(99, 102, 241, 0.3) !important;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3) !important;
+  background-color: var(--bg-sidebar) !important;
+  border-right: 1px solid var(--border-color) !important;
 }
 
 .sidebar-title {
-  font-family: 'Orbitron', sans-serif !important;
-  font-size: 1.3rem !important;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(90deg, var(--accent), #06b6d4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: 'Outfit', sans-serif !important;
   font-weight: 800 !important;
-  letter-spacing: 2px !important;
-  text-transform: uppercase;
-  margin-bottom: 1.5rem !important;
 }
 
-/* Inputs modernos */
-.form-control, .form-select {
-  background: rgba(15, 23, 42, 0.6) !important;
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  border-radius: 12px !important;
-  color: #e0e7ff !important;
-  padding: 0.75rem 1rem !important;
-  transition: all 0.3s ease !important;
+/* --- CARDS --- */
+.card, .bslib-value-box {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  backdrop-filter: blur(10px);
+  color: var(--text-primary) !important;
 }
 
-.form-control:focus, .form-select:focus {
-  background: rgba(15, 23, 42, 0.8) !important;
-  border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
-  outline: none !important;
+.card-header {
+  border-bottom: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  font-weight: 700;
 }
 
-/* Labels dos inputs */
-label {
-  color: #cbd5e1 !important;
-  font-weight: 600 !important;
-  font-size: 0.9rem !important;
-  margin-bottom: 0.5rem !important;
-  letter-spacing: 0.5px !important;
+/* --- INPUTS E BOTÕES --- */
+.form-control, .selectize-input, .btn-light {
+  background-color: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
 }
 
-/* Value boxes futuristas */
-.bslib-value-box {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15)) !important;
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  border-radius: 16px !important;
-  backdrop-filter: blur(10px) !important;
-  transition: all 0.3s ease !important;
-  position: relative;
-  overflow: hidden;
+.filter-option-inner-inner, .dropdown-toggle {
+  color: var(--text-primary) !important;
 }
 
-.bslib-value-box::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transition: left 0.5s;
+.dropdown-menu {
+  background-color: var(--bg-sidebar) !important;
+  border: 1px solid var(--border-color) !important;
+}
+.dropdown-menu li a {
+  color: var(--text-primary) !important;
+}
+.dropdown-menu li a:hover {
+  background-color: var(--accent) !important;
+  color: #fff !important;
 }
 
-.bslib-value-box:hover::before {
-  left: 100%;
-}
-
-.bslib-value-box:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4) !important;
-}
-
-.bslib-value-box .value-box-value {
-  font-family: 'Orbitron', sans-serif !important;
-  font-size: 2.5rem !important;
-  font-weight: 800 !important;
-  background: linear-gradient(135deg, #6366f1, #a78bfa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.bslib-value-box .value-box-title {
-  color: #cbd5e1 !important;
-  font-size: 0.85rem !important;
-  text-transform: uppercase;
-  letter-spacing: 1.5px !important;
-  font-weight: 600 !important;
-}
-
-/* Tema danger (vermelho) */
-.bslib-value-box.bg-danger {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15)) !important;
-  border-color: rgba(239, 68, 68, 0.4) !important;
-}
-
-.bg-danger .value-box-value {
-  background: linear-gradient(135deg, #ef4444, #f87171) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-}
-
-/* Tema success (verde) */
-.bslib-value-box.bg-success {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15)) !important;
-  border-color: rgba(16, 185, 129, 0.4) !important;
-}
-
-.bg-success .value-box-value {
-  background: linear-gradient(135deg, #10b981, #34d399) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-}
-
-/* Bootstrap-select (pickerInput) customizado */
-.bootstrap-select .dropdown-toggle {
-  background: rgba(15, 23, 42, 0.6) !important;
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  border-radius: 12px !important;
-  color: #e0e7ff !important;
-  padding: 0.75rem 1rem !important;
-}
-
-.bootstrap-select .dropdown-toggle:focus {
-  border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
-}
-
-.bootstrap-select .dropdown-menu {
-  background: rgba(15, 23, 42, 0.98) !important;
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  border-radius: 12px !important;
-  backdrop-filter: blur(20px) !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
-}
-
-.bootstrap-select .dropdown-menu li a {
-  color: #e0e7ff !important;
-  transition: all 0.2s ease !important;
-}
-
-.bootstrap-select .dropdown-menu li a:hover {
-  background: rgba(99, 102, 241, 0.2) !important;
-}
-
-.bootstrap-select .dropdown-menu li.selected a {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3)) !important;
-}
-
-/* Título principal */
-.bslib-page-title {
-  font-family: 'Orbitron', sans-serif !important;
-  font-size: 1.8rem !important;
-  font-weight: 900 !important;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: 2px !important;
-  text-transform: uppercase;
-  text-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
-  padding: 1rem 0 !important;
-}
-
-/* Separadores */
-hr {
-  border-color: rgba(99, 102, 241, 0.3) !important;
-  margin: 1.5rem 0 !important;
-  opacity: 0.5 !important;
-}
-
-/* Tabela DataTables */
+/* --- TABELA (DATATABLES) --- */
 .dataTables_wrapper {
-  color: #e0e7ff !important;
+  color: var(--text-primary) !important;
 }
-
-table.dataTable {
-  background: transparent !important;
-  color: #e0e7ff !important;
-}
-
-table.dataTable thead th {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2)) !important;
-  color: #e0e7ff !important;
-  border-bottom: 2px solid rgba(99, 102, 241, 0.4) !important;
-  font-weight: 700 !important;
-  text-transform: uppercase;
-  font-size: 0.85rem !important;
-  letter-spacing: 1px !important;
-}
-
 table.dataTable tbody tr {
-  background: rgba(15, 23, 42, 0.3) !important;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
-  transition: all 0.2s ease !important;
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
 }
-
 table.dataTable tbody tr:hover {
-  background: rgba(99, 102, 241, 0.15) !important;
-  transform: scale(1.01);
+  background-color: var(--table-hover) !important;
 }
-
-table.dataTable tbody tr.selected {
-  background: rgba(99, 102, 241, 0.3) !important;
+.dataTables_length select, .dataTables_filter input {
+  background-color: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
 }
-
-.dataTables_info, .dataTables_paginate {
-  color: #94a3b8 !important;
-}
-
 .paginate_button {
-  background: rgba(99, 102, 241, 0.2) !important;
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  color: #e0e7ff !important;
-  border-radius: 8px !important;
-  margin: 0 3px !important;
+  color: var(--text-primary) !important;
 }
-
-.paginate_button:hover {
-  background: rgba(99, 102, 241, 0.4) !important;
-  border-color: #6366f1 !important;
-}
-
 .paginate_button.current {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
-  border-color: #6366f1 !important;
+  background: var(--accent) !important;
+  color: #fff !important;
+  border: none;
 }
 
-/* Leaflet popup customizado */
-.leaflet-popup-content-wrapper {
-  background: rgba(15, 23, 42, 0.95) !important;
-  backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(99, 102, 241, 0.4) !important;
-  border-radius: 12px !important;
-  color: #e0e7ff !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+/* --- VALUE BOXES ICONS --- */
+.bslib-value-box .value-box-showcase svg {
+  fill: var(--accent) !important;
 }
-
-.leaflet-popup-tip {
-  background: rgba(15, 23, 42, 0.95) !important;
+.bslib-value-box .value-box-title {
+  color: var(--text-secondary) !important;
 }
-
-/* Botão de reset do mapa */
-.leaflet-control-easyButton {
-  background: rgba(15, 23, 42, 0.9) !important;
-  border: 1px solid rgba(99, 102, 241, 0.4) !important;
-  border-radius: 8px !important;
-  transition: all 0.3s ease !important;
-}
-
-.leaflet-control-easyButton:hover {
-  background: rgba(99, 102, 241, 0.3) !important;
-  transform: scale(1.1);
-}
-
-/* Controles do zoom */
-.leaflet-control-zoom a {
-  background: rgba(15, 23, 42, 0.9) !important;
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  color: #e0e7ff !important;
-}
-
-.leaflet-control-zoom a:hover {
-  background: rgba(99, 102, 241, 0.3) !important;
-}
-
-/* Animação de pulse nos ícones */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.bslib-value-box .value-box-showcase {
-  animation: pulse 2s infinite;
-}
-
-/* Texto muted */
-.text-muted {
-  color: #64748b !important;
-  font-size: 0.8rem !important;
-  font-style: italic;
-}
-
-/* Scrollbar customizada */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+.bslib-value-box .value-box-value {
+  color: var(--text-primary) !important;
 }
 "
 
 # ==============================================================================
-# 4. INTERFACE (UI)
+# 3. INTERFACE (UI)
 # ==============================================================================
 
-ui <- page_sidebar(
-  title = tags$span(
-    tags$i(class = "bi bi-stars", style = "margin-right: 10px;"),
-    "SEDUC GO | Monitoramento Estratégico",
-    tags$i(class = "bi bi-stars", style = "margin-left: 10px;")
-  ),
-  theme = tema_futurista,
+ui <- page_fillable(
+  title = "SEDUC GO | Intelligence Platform",
+  theme = bs_theme(version = 5, primary = "#8b5cf6"),
   
   tags$head(
-    tags$style(HTML(css_futurista))
+    tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"),
+    tags$link(rel = "stylesheet", href = "https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&family=Inter:wght@400;600&display=swap"),
+    tags$style(HTML(css_dinamico)),
+    tags$script(HTML("
+      Shiny.addCustomMessageHandler('toggle_theme_js', function(mode) {
+        if (mode === 'dark') {
+          document.body.classList.remove('light-mode');
+          document.body.classList.add('dark-mode');
+        } else {
+          document.body.classList.remove('dark-mode');
+          document.body.classList.add('light-mode');
+        }
+      });
+      // Inicia em Dark Mode
+      $(document).ready(function() {
+        document.body.classList.add('dark-mode');
+      });
+    "))
   ),
   
-  sidebar = sidebar(
-    title = tags$div(
-      class = "sidebar-title",
-      tags$i(class = "bi bi-sliders", style = "margin-right: 8px;"),
-      "Filtros de Análise"
+  useShinyjs(),
+  
+  layout_sidebar(
+    sidebar = sidebar(
+      width = 320,
+      
+      div(
+        class = "sidebar-title",
+        style = "margin-bottom: 20px; font-size: 1.3rem;",
+        tags$i(class = "bi bi-grid-fill", style = "margin-right: 10px;"),
+        "CONTROL CENTER"
+      ),
+      
+      selectInput("filtro_etapa", "Etapa de Ensino", choices = unique(dados_mapa$ETAPA)),
+      
+      pickerInput(
+        inputId = "filtro_regional",
+        label = "Regionais",
+        choices = lista_regionais,
+        selected = lista_regionais,
+        multiple = TRUE,
+        options = list(`actions-box` = TRUE, `live-search` = TRUE)
+      ),
+      
+      pickerInput(
+        inputId = "filtro_classificacao",
+        label = "Status",
+        choices = lista_status,
+        selected = lista_status,
+        multiple = TRUE,
+        options = list(`actions-box` = TRUE)
+      ),
+      
+      hr(style="border-color: var(--border-color); opacity: 0.5;"),
+      
+      selectizeInput("busca_escola", "Buscar Unidade", choices = NULL, options = list(placeholder = 'Nome da escola...')),
+      
+      hr(style="border-color: var(--border-color); opacity: 0.5;"),
+      
+      # --- CAIXA DE MODO ESCURO (MODIFICADA: Sem ícone, sem texto "Aparência") ---
+      div(
+        style = "background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);",
+        # O switch ocupa toda a largura agora para ficar elegante
+        materialSwitch(inputId = "dark_mode", label = "Modo Escuro", value = TRUE, status = "primary", right = TRUE, width = "100%")
+      ),
+      
+      div(style = "height: 20px;"),
+      
+      actionButton("reset_filters", "Resetar Filtros", icon = icon("rotate-right"), class = "btn-outline-primary w-100")
     ),
-    width = 340,
     
-    selectInput(
-      "filtro_etapa", 
-      tags$span(tags$i(class = "bi bi-mortarboard-fill"), " Etapa de Ensino:"),
-      choices = unique(dados_mapa$ETAPA)
-    ),
-    
-    pickerInput(
-      inputId = "filtro_regional",
-      label = tags$span(tags$i(class = "bi bi-geo-alt-fill"), " Regionais (Multi-seleção):"),
-      choices = lista_regionais,
-      selected = lista_regionais,
-      multiple = TRUE,
-      options = list(
-        `actions-box` = TRUE,
-        `live-search` = TRUE,
-        `selected-text-format` = "count > 3",
-        `count-selected-text` = "{0} Regionais",
-        `none-selected-text` = "Nenhuma selecionada"
-      )
-    ),
-    
-    pickerInput(
-      inputId = "filtro_classificacao",
-      label = tags$span(tags$i(class = "bi bi-flag-fill"), " Status da Escola:"),
-      choices = lista_status,
-      selected = lista_status,
-      multiple = TRUE,
-      options = list(
-        `actions-box` = TRUE,
-        `selected-text-format` = "count > 2"
-      )
-    ),
-    
-    hr(),
-    
-    selectizeInput(
-      "busca_escola", 
-      tags$span(tags$i(class = "bi bi-search"), " Buscar Escola Específica:"),
-      choices = NULL, 
-      options = list(placeholder = 'Digite o nome da escola...')
-    ),
-    
-    hr(),
-    
+    # Conteúdo Principal
     div(
-      class = "text-muted", 
-      style = "font-size: 0.75rem; text-align: center; padding: 10px;",
-      tags$i(class = "bi bi-lightbulb-fill", style = "margin-right: 5px;"),
-      "Use 'Select All' para seleção rápida"
-    )
-  ),
-  
-  layout_columns(
-    fill = FALSE, 
-    height = "140px",
-    value_box(
-      title = "Total Selecionado", 
-      value = textOutput("kpi_total"), 
-      showcase = tags$i(class = "bi bi-buildings-fill"),
-      theme = "primary"
-    ),
-    value_box(
-      title = "Atenção", 
-      value = textOutput("kpi_risco"), 
-      showcase = tags$i(class = "bi bi-exclamation-triangle-fill"),
-      theme = "danger"
-    ),
-    value_box(
-      title = "Sucesso", 
-      value = textOutput("kpi_sucesso"), 
-      showcase = tags$i(class = "bi bi-check-circle-fill"),
-      theme = "success"
-    )
-  ),
-  
-  layout_columns(
-    col_widths = c(12, 12), 
-    row_heights = c(600, 400),
-    card(
-      full_screen = TRUE, 
-      card_header(
-        tags$i(class = "bi bi-map-fill", style = "margin-right: 8px;"),
-        "Mapa Interativo de Previsões"
-      ), 
-      leafletOutput("mapa", height = "100%")
-    ),
-    card(
-      card_header(
-        tags$i(class = "bi bi-table", style = "margin-right: 8px;"),
-        "Detalhamento das Escolas"
-      ), 
-      DTOutput("tabela")
+      style = "padding: 25px; height: 100vh; overflow-y: auto;",
+      
+      div(
+        style = "display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px;",
+        div(
+          h1("Monitoramento Estratégico", style = "margin: 0; font-weight: 800; font-size: 2rem; font-family: 'Outfit';"),
+          div(class = "dynamic-subtitle", "Inteligência de Dados • SEDUC GO")
+        ),
+        div(
+          style = "color: var(--text-secondary); font-size: 0.8rem;",
+          tags$i(class = "bi bi-clock-history"), 
+          paste("Atualizado em:", format(Sys.Date(), "%d/%m/%Y"))
+        )
+      ),
+      
+      layout_columns(
+        col_widths = c(4, 4, 4),
+        heights = "130px",
+        value_box(title = "Total Unidades", value = textOutput("kpi_total"), showcase = bsicons::bs_icon("buildings", size = "3rem"), theme = "primary"),
+        value_box(title = "Ponto de Atenção", value = textOutput("kpi_risco"), showcase = bsicons::bs_icon("exclamation-triangle", size = "3rem"), theme = "danger"),
+        value_box(title = "Desempenho Alto", value = textOutput("kpi_sucesso"), showcase = bsicons::bs_icon("check-circle", size = "3rem"), theme = "success")
+      ),
+      
+      navset_card_pill(
+        height = "800px",
+        nav_panel("Geoanálise", icon = icon("map"), leafletOutput("mapa", height = "100%")),
+        nav_panel("Dados Tabulares", icon = icon("table"), div(style = "padding: 10px;", DTOutput("tabela")))
+      )
     )
   )
 )
 
 # ==============================================================================
-# 5. SERVIDOR
+# 4. SERVIDOR
 # ==============================================================================
 
 server <- function(input, output, session) {
   
-  # --- A. Filtragem Reativa ---
-  dados_filtrados <- reactive({
-    if (is.null(input$filtro_regional) || is.null(input$filtro_classificacao)) {
-      return(dados_mapa[0,]) 
-    }
+  observeEvent(input$dark_mode, {
+    modo <- if(input$dark_mode) "dark" else "light"
+    session$sendCustomMessage("toggle_theme_js", modo)
     
-    df <- dados_mapa %>% 
+    proxy <- leafletProxy("mapa")
+    if(input$dark_mode) {
+      proxy %>% clearTiles() %>% addProviderTiles(providers$CartoDB.DarkMatter)
+    } else {
+      proxy %>% clearTiles() %>% addProviderTiles(providers$CartoDB.Positron)
+    }
+  })
+  
+  observeEvent(input$reset_filters, {
+    updatePickerInput(session, "filtro_regional", selected = lista_regionais)
+    updatePickerInput(session, "filtro_classificacao", selected = lista_status)
+    updateSelectizeInput(session, "busca_escola", selected = "")
+  })
+  
+  dados_filtrados <- reactive({
+    req(input$filtro_regional, input$filtro_classificacao)
+    dados_mapa %>% 
       filter(ETAPA == input$filtro_etapa) %>%
       filter(NM_REGIONAL %in% input$filtro_regional) %>%
       filter(CLASSIFICACAO %in% input$filtro_classificacao)
-    
-    return(df)
   })
   
-  # --- B. Atualizar Busca ---
   observe({
     req(input$filtro_etapa)
     escolas <- unique(dados_mapa %>% filter(ETAPA == input$filtro_etapa) %>% pull(NM_ESCOLA))
     updateSelectizeInput(session, "busca_escola", choices = c("", sort(escolas)), server = TRUE)
   })
   
-  # --- C. KPIs ---
-  output$kpi_total   <- renderText({ format(nrow(dados_filtrados()), big.mark=".") })
-  output$kpi_risco   <- renderText({ format(sum(grepl("VERMELHO", dados_filtrados()$CLASSIFICACAO)), big.mark=".") })
-  output$kpi_sucesso <- renderText({ format(sum(grepl("VERDE", dados_filtrados()$CLASSIFICACAO)), big.mark=".") })
+  output$kpi_total   <- renderText({ format(nrow(dados_filtrados()), big.mark = ".") })
+  output$kpi_risco   <- renderText({ format(sum(grepl("VERMELHO", dados_filtrados()$CLASSIFICACAO)), big.mark = ".") })
+  output$kpi_sucesso <- renderText({ format(sum(grepl("VERDE", dados_filtrados()$CLASSIFICACAO)), big.mark = ".") })
   
-  # --- D. Mapa Base (Dark Mode) ---
-  paleta <- colorNumeric(palette = "RdYlGn", domain = c(0, 1))
+  paleta <- colorNumeric(palette = c("#ef4444", "#f59e0b", "#10b981"), domain = c(0, 1))
   
   output$mapa <- renderLeaflet({
     leaflet() %>%
-      addProviderTiles(providers$CartoDB.DarkMatter) %>%  # Tema escuro para combinar
+      addProviderTiles(providers$CartoDB.DarkMatter) %>% 
       fitBounds(lng1 = -53.5, lat1 = -19.5, lng2 = -45.5, lat2 = -12.5) %>%
-      addResetMapButton()
+      addResetMapButton() %>%
+      htmlwidgets::onRender("function(el, x) { 
+        var map = this; 
+        map.createPane('polygons'); map.getPane('polygons').style.zIndex = 400;
+        map.createPane('markers'); map.getPane('markers').style.zIndex = 600;
+      }")
   })
   
-  # --- E. Polígonos Inteligentes ---
   observeEvent(input$filtro_regional, {
     proxy <- leafletProxy("mapa")
     proxy %>% clearShapes()
     
-    total_regionais_possiveis <- length(lista_regionais)
-    n_selecionados <- length(input$filtro_regional)
-    
-    if (n_selecionados == total_regionais_possiveis || n_selecionados == 0) {
-      proxy %>% addPolygons(
-        data = shape_estado, 
-        fillColor = "#1e293b", 
-        color = "#6366f1", 
-        weight = 3, 
-        fillOpacity = 0.2,
-        dashArray = "5, 5"
-      )
+    if (length(input$filtro_regional) == length(lista_regionais) || length(input$filtro_regional) == 0) {
+      proxy %>% addPolygons(data = shape_estado, fillColor = "#1e293b", color = "#6366f1", weight = 2, fillOpacity = 0.1, options = pathOptions(pane = "polygons"))
     } else {
-      munis_selecionados <- shape_munis %>% 
-        filter(NM_REGIONAL %in% input$filtro_regional)
-      
-      if(nrow(munis_selecionados) > 0){
-        bbox <- st_bbox(munis_selecionados)
-        proxy %>% 
-          flyToBounds(bbox[[1]], bbox[[2]], bbox[[3]], bbox[[4]]) %>%
-          addPolygons(
-            data = munis_selecionados, 
-            fillColor = "#6366f1", 
-            color = "#8b5cf6", 
-            weight = 2, 
-            fillOpacity = 0.15,
-            label = ~name_muni,
-            highlightOptions = highlightOptions(
-              weight = 3,
-              color = "#a78bfa",
-              fillOpacity = 0.3,
-              bringToFront = TRUE
-            )
-          )
+      munis <- shape_munis %>% filter(NM_REGIONAL %in% input$filtro_regional)
+      if(nrow(munis) > 0){
+        bbox <- st_bbox(munis)
+        proxy %>% flyToBounds(bbox[[1]], bbox[[2]], bbox[[3]], bbox[[4]]) %>%
+          addPolygons(data = munis, fillColor = "#8b5cf6", color = "#0ea5e9", weight = 1, fillOpacity = 0.1, label = ~name_muni, options = pathOptions(pane = "polygons"))
       }
     }
   }, ignoreNULL = FALSE)
   
-  # --- F. Pontos (Escolas) com estilo neon ---
   observe({
     df <- dados_filtrados()
-    if(nrow(df) == 0) {
-      leafletProxy("mapa") %>% clearMarkers()
-      return()
-    }
+    if(nrow(df) == 0) { leafletProxy("mapa") %>% clearMarkers(); return() }
     
-    tem_cresc <- "CRESCIMENTO_LP" %in% names(df)
     popup_content <- paste0(
-      "<div style='font-family: Space Grotesk, sans-serif; padding: 5px;'>",
-      "<h4 style='margin: 0 0 8px 0; color: #a78bfa; font-family: Orbitron, sans-serif;'>", 
-      df$NM_ESCOLA, "</h4>",
-      "<span style='color: #94a3b8; font-size: 0.9rem;'>📍 ", df$NM_MUNICIPIO, "</span>",
-      "<hr style='border-color: rgba(99, 102, 241, 0.3); margin: 10px 0;'>",
-      "<div style='background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2)); ",
-      "padding: 10px; border-radius: 8px; margin-bottom: 8px;'>",
-      "<b style='font-size: 1.3rem; color: #a78bfa;'>", round(df$Prob_Media * 100, 1), "%</b>",
-      "<span style='color: #cbd5e1; font-size: 0.85rem;'> Probabilidade</span>",
+      "<div style='font-family: Inter, sans-serif; min-width: 220px;'>",
+      "<div style='background: linear-gradient(135deg, #8b5cf6, #06b6d4); padding: 12px; color: white; border-radius: 8px 8px 0 0;'>",
+      "<div style='font-size: 0.7rem; opacity: 0.9; text-transform: uppercase;'>Escola</div>",
+      "<div style='font-weight: 700; font-size: 1.1rem; line-height: 1.2;'>", df$NM_ESCOLA, "</div>",
       "</div>",
-      "<div style='color: #e0e7ff;'><b>Status:</b> ", df$CLASSIFICACAO, "</div>",
-      if(tem_cresc) paste0("<div style='color: #94a3b8; font-size: 0.85rem; margin-top: 8px;'>",
-                           "<i>📈 Crescimento LP: ", round(df$CRESCIMENTO_LP, 2), "</i></div>") else "",
+      "<div style='padding: 15px; background: white; color: #334155;'>",
+      "<div><small style='color: #64748b;'>Município</small><br><strong>", df$NM_MUNICIPIO, "</strong></div>",
+      "<div style='margin-top: 10px; display: flex; justify-content: space-between; align-items: center;'>",
+      "<div><small style='color: #64748b;'>Probabilidade</small><br><span style='font-size: 1.5rem; font-weight: 800; color: #7c3aed;'>", round(df$Prob_Media * 100, 1), "%</span></div>",
+      "<span style='padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 700; background: ",
+      ifelse(df$CLASSIFICACAO == "VERDE", "#dcfce7; color: #166534", 
+             ifelse(df$CLASSIFICACAO == "AMARELO", "#fef3c7; color: #b45309", "#fee2e2; color: #991b1b")),
+      ";'>", df$CLASSIFICACAO, "</span>",
+      "</div>",
+      "</div>",
       "</div>"
     )
     
     leafletProxy("mapa", data = df) %>%
       clearMarkers() %>%
       addCircleMarkers(
-        lng = ~LONGITUDE, lat = ~LATITUDE,
-        radius = 8, 
-        color = "#ffffff", 
-        weight = 2,
-        fillColor = ~paleta(Prob_Media), 
-        fillOpacity = 0.9,
-        popup = popup_content, 
-        layerId = ~CD_ESCOLA,
-        label = ~paste0("🏫 ", NM_ESCOLA, " • ", round(Prob_Media*100,0), "%")
+        lng = ~LONGITUDE, lat = ~LATITUDE, radius = 7, color = "#ffffff", weight = 1.5,
+        fillColor = ~paleta(Prob_Media), fillOpacity = 0.9,
+        popup = popup_content, options = pathOptions(pane = "markers")
       )
   })
   
-  # --- G. Interações ---
   observeEvent(input$busca_escola, {
-    req(input$busca_escola)
+    req(input$busca_escola, input$busca_escola != "")
     alvo <- dados_mapa %>% filter(NM_ESCOLA == input$busca_escola)
-    if(nrow(alvo) > 0) {
-      leafletProxy("mapa") %>%
-        setView(lng = alvo$LONGITUDE, lat = alvo$LATITUDE, zoom = 16) %>%
-        addPopups(
-          lng = alvo$LONGITUDE, 
-          lat = alvo$LATITUDE, 
-          popup = paste0(
-            "<div style='font-family: Orbitron, sans-serif; font-size: 1.1rem; color: #a78bfa;'>",
-            "🎯 <b>", alvo$NM_ESCOLA, "</b></div>"
-          )
-        )
-    }
+    if(nrow(alvo) > 0) leafletProxy("mapa") %>% setView(lng = alvo$LONGITUDE[1], lat = alvo$LATITUDE[1], zoom = 15)
   })
   
   observeEvent(input$tabela_rows_selected, {
     idx <- input$tabela_rows_selected
-    escola <- dados_filtrados()[idx, ]
-    leafletProxy("mapa") %>%
-      setView(lng = escola$LONGITUDE, lat = escola$LATITUDE, zoom = 15) %>%
-      addPopups(
-        lng = escola$LONGITUDE, 
-        lat = escola$LATITUDE, 
-        popup = paste0(
-          "<div style='font-family: Orbitron, sans-serif; color: #a78bfa;'>",
-          "📍 <b>", escola$NM_ESCOLA, "</b></div>"
-        )
-      )
+    if(length(idx) > 0) {
+      escola <- dados_filtrados()[idx, ]
+      leafletProxy("mapa") %>% setView(lng = escola$LONGITUDE, lat = escola$LATITUDE, zoom = 15)
+    }
   })
   
+  # --- Tabela (COLUNAS E DADOS INTACTOS) ---
   output$tabela <- renderDT({
-    dados_filtrados() %>%
-      select(NM_ESCOLA, NM_MUNICIPIO, NM_REGIONAL, CLASSIFICACAO, Prob_Media) %>%
-      mutate(Prob_Media = paste0(round(Prob_Media * 100, 1), "%")) %>%
-      datatable(
-        selection = 'single', 
-        options = list(
-          pageLength = 10, 
-          scrollX = TRUE,
-          dom = 'frtip',
-          language = list(
-            search = "Buscar:",
-            lengthMenu = "Mostrar _MENU_ registros",
-            info = "Mostrando _START_ a _END_ de _TOTAL_ escolas",
-            paginate = list(previous = "Anterior", `next` = "Próximo")
-          )
-        ), 
-        rownames = FALSE
-      ) %>%
-      formatStyle(
-        'CLASSIFICACAO',
-        backgroundColor = styleEqual(
-          c('VERDE', 'AMARELO', 'VERMELHO'),
-          c('rgba(16, 185, 129, 0.2)', 'rgba(245, 158, 11, 0.2)', 'rgba(239, 68, 68, 0.2)')
-        ),
-        color = styleEqual(
-          c('VERDE', 'AMARELO', 'VERMELHO'),
-          c('#10b981', '#f59e0b', '#ef4444')
-        ),
-        fontWeight = 'bold'
-      )
+    df <- dados_filtrados()
+    colunas <- c("NM_ESCOLA", "NM_MUNICIPIO", "NM_REGIONAL", "CLASSIFICACAO", "Prob_Media")
+    if("Prob_Min_Credivel" %in% names(df)) colunas <- c(colunas, "Prob_Min_Credivel")
+    if("Prob_Max_Credivel" %in% names(df)) colunas <- c(colunas, "Prob_Max_Credivel")
+    if("CRESCIMENTO_LP" %in% names(df)) colunas <- c(colunas, "CRESCIMENTO_LP")
+    
+    df_tab <- df %>% select(any_of(colunas))
+    if("Prob_Media" %in% names(df_tab)) df_tab <- mutate(df_tab, Prob_Media = paste0(round(Prob_Media * 100, 1), "%"))
+    
+    datatable(df_tab, selection = 'single', rownames = FALSE,
+              options = list(pageLength = 10, scrollX = TRUE, dom = 'frtp', 
+                             language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Portuguese-Brasil.json'))) %>%
+      formatStyle('CLASSIFICACAO',
+                  color = styleEqual(c('VERDE', 'AMARELO', 'VERMELHO'), c('#10b981', '#f59e0b', '#f43f5e')),
+                  fontWeight = 'bold')
   })
 }
 

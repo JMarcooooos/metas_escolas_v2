@@ -30,7 +30,7 @@ message("--- 3. PROCESSANDO MAPAS (OFFLINE) ---")
 caminho_shapes_brutos <- "shapes_goias_bruto.rds"
 
 if (!file.exists(caminho_shapes_brutos)) {
-  stop("ERRO CRÍTICO: O arquivo 'shapes_goias_bruto.rds' não foi encontrado na pasta Bases/.")
+  stop("ERRO CRÍTICO: O arquivo 'shapes_goias_bruto.rds' não foi encontrado na pasta.")
 }
 
 mapa_bruto <- readRDS(caminho_shapes_brutos)
