@@ -1,6 +1,5 @@
 # deploy.R
 
-options(repos = NULL) 
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 
 library(rsconnect)
@@ -12,6 +11,10 @@ library(shinyWidgets)
 library(leaflet.extras)
 library(DT)
 library(sf)
+
+message("--- CORRIGINDO METADADOS DO BSICONS ---")
+install.packages("bsicons", repos = "https://cloud.r-project.org")
+install.packages("bslib", repos = "https://cloud.r-project.org")
 
 setAccountInfo(
   name   = Sys.getenv("SHINY_ACC_NAME"),
