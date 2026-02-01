@@ -1,33 +1,27 @@
-name: Modelagem Completa (EF e EM)
+name: Pipeline Completo (Modelagem + Dashboard)
 
 on:
-  workflow_dispatch: # Botão manual para iniciar
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:      
 
 jobs:
-  analise_bayesiana:
-    runs-on: ubuntu-latest
-    
-    # --- ESTRATÉGIA DE MATRIZ (RODA OS 2 SCRIPTS EM PARALELO) ---
-    strategy:
-      fail-fast: false # Se um der erro, o outro continua
-      matrix:
-        script: ["modelagemEF.R", "modelagemEM.R"] 
-    # -----------------------------------------------------------
+  # (Gera os xlsx)
 
-    # Permissões necessárias para ler o repo
-    permissions:
-      contents: read
+  modelagem:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        script: ["modelagemEF.R", "modelagemEM.R"] # Seus scripts de modelo
 
     steps:
-      - name: Checkout do Código
-        uses: actions/checkout@v4
-
-      - name: Configurar R (RSPM para velocidade máxima)
-        uses: r-lib/actions/setup-r@v2
+      - uses: actions/checkout@v4
+      
+      - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
 
-      # --- BLOCO DE CACHE DO CMDSTAN (TURBO) ---
       - name: Cache CmdStan
         id: cache-cmdstan
         uses: actions/cache@v4
@@ -35,21 +29,14 @@ jobs:
           path: /home/runner/.cmdstan
           key: ${{ runner.os }}-cmdstan-2.34.1
 
-      - name: Instalar CmdStan e Criar Pasta (Se não houver cache)
+      - name: Instalar CmdStan
         if: steps.cache-cmdstan.outputs.cache-hit != 'true'
         run: |
-            # 1. A CORREÇÃO: Cria a pasta antes de tudo
             mkdir -p /home/runner/.cmdstan
-
-            # 2. Instala o pacote R temporariamente para baixar o binário
             Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
-            
-            # 3. Instala o motor C++ (Isso que demora e será cacheado)
             Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
 
-      # --- FIM DO BLOCO DE CACHE ---
-
-      - name: Instalar Dependências do Projeto
+      - name: Instalar Dependências R
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -60,22 +47,56 @@ jobs:
             any::readxl
             stan-dev/cmdstanr
 
-      - name: Rodar Script ${{ matrix.script }}
+      - name: Rodar Modelo ${{ matrix.script }}
         run: |
-          # Garante que o R saiba onde procurar o CmdStan
           echo "CMDSTAN_PATH=/home/runner/.cmdstan/cmdstan-2.34.1" >> .Renviron
-          
-          # Roda o script da vez (EF ou EM)
           Rscript ${{ matrix.script }}
 
-      # --- SALVA OS RESULTADOS ---
-      - name: Upload Resultados (${{ matrix.script }})
+      # Salva os .xlsx gerados como Artefatos para o próximo Job
+      - name: Upload Resultados
         uses: actions/upload-artifact@v4
         with:
-          # O nome do zip será diferente para cada script (ex: resultados-modelagem_EF.R)
           name: resultados-${{ matrix.script }}
           path: |
             *.csv
-            *.rds
             *.xlsx
-          retention-days: 5
+
+  # (Gera RDS e Publica)
+
+  deploy:
+    needs: modelagem 
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Download Resultados EF
+        uses: actions/download-artifact@v4
+        with:
+          name: resultados-modelagemEF.R
+          path: .
+
+      - name: Download Resultados EM
+        uses: actions/download-artifact@v4
+        with:
+          name: resultados-modelagemEM.R
+          path: .
+
+      - name: Instalar Pacotes Deploy
+        run: |
+          sudo apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev # Dependências Linux para mapas
+          Rscript -e "install.packages(c('tidyverse', 'readxl', 'sf', 'geobr', 'rsconnect', 'stringi'))"
+
+      - name: Gerar Bases para o App
+        run: Rscript bases_shiny.R
+
+      - name: Publicar no ShinyApps
+        run: Rscript deploy.R
+        env:
+          SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
+          SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
+          SHINY_SECRET: ${{ secrets.SHINY_SECRET }}

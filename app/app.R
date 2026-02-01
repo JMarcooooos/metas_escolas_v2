@@ -13,8 +13,8 @@ library(htmltools)
 # 1. CARREGAMENTO DE DADOS
 # ==============================================================================
 
-dados_mapa <- readRDS("shinyy/dados_para_o_mapa.rds")
-shapes     <- readRDS("shinyy/mapa_shapes.rds")
+dados_mapa <- readRDS("dados_para_o_mapa.rds")
+shapes     <- readRDS("mapa_shapes.rds")
 
 shape_estado <- shapes$estado
 shape_munis  <- shapes$municipios
