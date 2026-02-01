@@ -1,20 +1,20 @@
-name: Pipeline Completo (Modelagem + Dashboard)
+name: Modelagem e Dashboard
 
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:      
+  workflow_dispatch:
 
 jobs:
-  # ====================================================
+  # -----------------------------------------------------------------
   # JOB 1: MODELAGEM (Gera os arquivos)
-  # ====================================================
+  # -----------------------------------------------------------------
   modelagem:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        script: ["modelagemEF.R", "modelagemEM.R"] 
+        script: ["modelagemEF.R", "modelagemEM.R"]
 
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
             Rscript -e 'install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))'
             Rscript -e 'library(cmdstanr); install_cmdstan(dir = "/home/runner/.cmdstan", cores = 2)'
 
-      - name: Instalar Dependências R
+      - name: Instalar Dependências R (Modelagem)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -54,16 +54,15 @@ jobs:
           echo "CMDSTAN_PATH=/home/runner/.cmdstan/cmdstan-2.34.1" >> .Renviron
           Rscript ${{ matrix.script }}
 
-      # PACOTE 1: LEVE (Só XLSX para o App ler)
-      # MUDANÇA: Agora pegamos *.xlsx aqui
+      # PACOTE 1: LEVE (Só XLSX para o App)
       - name: Upload Dados para Deploy
         uses: actions/upload-artifact@v4
         with:
-          name: dados-deploy-${{ matrix.script }} 
+          name: dados-deploy-${{ matrix.script }}
           path: *.xlsx
 
-      # PACOTE 2: PESADO (Backup pra você baixar: XLSX e Modelos Brutos)
-      - name: Upload Modelos Completos (Backup)
+      # PACOTE 2: PESADO (Backup completo)
+      - name: Upload Backup Completo
         uses: actions/upload-artifact@v4
         with:
           name: BACKUP-COMPLETO-${{ matrix.script }}
@@ -72,11 +71,11 @@ jobs:
             *.rds
             *.rda
 
-  # ====================================================
+  # -----------------------------------------------------------------
   # JOB 2: DEPLOY (Baixa XLSX e Publica)
-  # ====================================================
+  # -----------------------------------------------------------------
   deploy:
-    needs: modelagem 
+    needs: modelagem
     runs-on: ubuntu-latest
     
     steps:
@@ -86,7 +85,7 @@ jobs:
         with:
           use-public-rspm: true
 
-      # Baixa APENAS o PACOTE 1 (XLSX)
+      # Baixa APENAS os XLSX (Pacote 1)
       - name: Download Resultados EF
         uses: actions/download-artifact@v4
         with:
@@ -101,8 +100,7 @@ jobs:
           path: .
           merge-multiple: true
 
-      # Instalação de pacotes
-      - name: Instalar Pacotes R (Rápido + Cache)
+      - name: Instalar Pacotes R (Deploy)
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
