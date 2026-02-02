@@ -29,7 +29,7 @@ lista_regionais <- sort(unique(dados_mapa$NM_REGIONAL))
 lista_status    <- sort(unique(dados_mapa$CLASSIFICACAO))
 
 # ==============================================================================
-# 2. CSS DINÂMICO (COM CORREÇÃO DE SCROLLBAR E NOVOS ESTILOS DE RODAPÉ)
+# 2. CSS DINÂMICO
 # ==============================================================================
 
 css_dinamico <- "
@@ -213,8 +213,6 @@ ui <- page_fillable(
     sidebar = sidebar(
       width = 320,
       
-      # Título "Control Center" REMOVIDO conforme solicitado
-      
       selectInput("filtro_etapa", "Etapa de Ensino", choices = unique(dados_mapa$ETAPA)),
       
       pickerInput(
@@ -241,7 +239,6 @@ ui <- page_fillable(
       
       hr(style="border-color: var(--border-color); opacity: 0.5;"),
       
-      # Caixa de Modo Escuro sem título e sem ícone
       div(
         style = "background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);",
         materialSwitch(inputId = "dark_mode", label = "Modo Escuro", value = TRUE, status = "primary", right = TRUE, width = "100%")
@@ -332,6 +329,7 @@ server <- function(input, output, session) {
   })
   
   output$kpi_total   <- renderText({ format(nrow(dados_filtrados()), big.mark = ".") })
+  # Ajuste no KPI para capturar qualquer variação de VERMELHO ou VERDE (ex: Verde Sólido, Verde Claro)
   output$kpi_risco   <- renderText({ format(sum(grepl("VERMELHO", dados_filtrados()$CLASSIFICACAO)), big.mark = ".") })
   output$kpi_sucesso <- renderText({ format(sum(grepl("VERDE", dados_filtrados()$CLASSIFICACAO)), big.mark = ".") })
   
@@ -369,21 +367,43 @@ server <- function(input, output, session) {
     df <- dados_filtrados()
     if(nrow(df) == 0) { leafletProxy("mapa") %>% clearMarkers(); return() }
     
+    # Preparando variáveis para o popup (tratando nulos e porcentagens)
+    p_media <- round(df$Prob_Media * 100, 1)
+    
+    # Verifica se as colunas novas existem para compor o popup
+    p_min  <- if("Prob_Min_Credivel" %in% names(df)) paste0(round(df$Prob_Min_Credivel * 100, 1), "%") else "--"
+    p_max  <- if("Prob_Max_Credivel" %in% names(df)) paste0(round(df$Prob_Max_Credivel * 100, 1), "%") else "--"
+    amp_ic <- if("Amplitude_IC" %in% names(df)) paste0(round(df$Amplitude_IC * 100, 1), "%") else "--"
+    
+    # Lógica de cor do badge no popup (incluindo Azul)
+    cor_badge <- case_when(
+      grepl("VERDE", df$CLASSIFICACAO) ~ "#dcfce7; color: #166534",
+      grepl("AMARELO", df$CLASSIFICACAO) ~ "#fef3c7; color: #b45309",
+      grepl("AZUL", df$CLASSIFICACAO) ~ "#dbeafe; color: #1e40af", # Estilo para Azul
+      TRUE ~ "#fee2e2; color: #991b1b" # Vermelho como default restante
+    )
+    
     popup_content <- paste0(
-      "<div style='font-family: Inter, sans-serif; min-width: 220px;'>",
+      "<div style='font-family: Inter, sans-serif; min-width: 240px;'>",
       "<div style='background: linear-gradient(135deg, #8b5cf6, #06b6d4); padding: 12px; color: white; border-radius: 8px 8px 0 0;'>",
       "<div style='font-size: 0.7rem; opacity: 0.9; text-transform: uppercase;'>Escola</div>",
       "<div style='font-weight: 700; font-size: 1.1rem; line-height: 1.2;'>", df$NM_ESCOLA, "</div>",
       "</div>",
       "<div style='padding: 15px; background: white; color: #334155;'>",
       "<div><small style='color: #64748b;'>Município</small><br><strong>", df$NM_MUNICIPIO, "</strong></div>",
+      
       "<div style='margin-top: 10px; display: flex; justify-content: space-between; align-items: center;'>",
-      "<div><small style='color: #64748b;'>Probabilidade</small><br><span style='font-size: 1.5rem; font-weight: 800; color: #7c3aed;'>", round(df$Prob_Media * 100, 1), "%</span></div>",
-      "<span style='padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 700; background: ",
-      ifelse(df$CLASSIFICACAO == "VERDE", "#dcfce7; color: #166534", 
-             ifelse(df$CLASSIFICACAO == "AMARELO", "#fef3c7; color: #b45309", "#fee2e2; color: #991b1b")),
-      ";'>", df$CLASSIFICACAO, "</span>",
+      "<div><small style='color: #64748b;'>Probabilidade</small><br><span style='font-size: 1.5rem; font-weight: 800; color: #7c3aed;'>", p_media, "%</span></div>",
+      "<span style='padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; font-weight: 700; background: ", cor_badge, ";'>", df$CLASSIFICACAO, "</span>",
       "</div>",
+      
+      # Mini painel de estatísticas adicionais no popup
+      "<div style='margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 0.8rem; display: flex; justify-content: space-between;'>",
+      "<div style='text-align: center;'><span style='color: #64748b;'>Mín</span><br><strong>", p_min, "</strong></div>",
+      "<div style='text-align: center;'><span style='color: #64748b;'>Máx</span><br><strong>", p_max, "</strong></div>",
+      "<div style='text-align: center;'><span style='color: #64748b;'>Ampl</span><br><strong>", amp_ic, "</strong></div>",
+      "</div>",
+      
       "</div>",
       "</div>"
     )
@@ -411,27 +431,39 @@ server <- function(input, output, session) {
     }
   })
   
-  # --- Tabela COM BOTÕES DE DOWNLOAD ---
+  # --- Tabela COM NOVAS COLUNAS E FORMATAÇÃO ---
   output$tabela <- renderDT({
     df <- dados_filtrados()
-    colunas <- c("NM_ESCOLA", "NM_MUNICIPIO", "NM_REGIONAL", "CLASSIFICACAO", "Prob_Media")
-    if("Prob_Min_Credivel" %in% names(df)) colunas <- c(colunas, "Prob_Min_Credivel")
-    if("Prob_Max_Credivel" %in% names(df)) colunas <- c(colunas, "Prob_Max_Credivel")
-    if("CRESCIMENTO_LP" %in% names(df)) colunas <- c(colunas, "CRESCIMENTO_LP")
     
-    df_tab <- df %>% select(any_of(colunas))
-    if("Prob_Media" %in% names(df_tab)) df_tab <- mutate(df_tab, Prob_Media = paste0(round(Prob_Media * 100, 1), "%"))
+    # Definição das colunas a serem exibidas (incluindo as novas)
+    colunas_desejadas <- c("NM_ESCOLA", "NM_MUNICIPIO", "NM_REGIONAL", "CLASSIFICACAO", 
+                           "Prob_Media", "Prob_Min_Credivel", "Prob_Max_Credivel", "Amplitude_IC")
     
-    # Renderização da Tabela com Botões
+    # Seleciona apenas as que existem no dataframe (para evitar erro)
+    colunas_finais <- intersect(colunas_desejadas, names(df))
+    
+    df_tab <- df %>% select(all_of(colunas_finais))
+    
+    # Transformação para porcentagem (texto) para exibição
+    vars_percent <- c("Prob_Media", "Prob_Min_Credivel", "Prob_Max_Credivel", "Amplitude_IC")
+    
+    for(v in vars_percent) {
+      if(v %in% names(df_tab)) {
+        # Multiplica por 100 e adiciona %
+        df_tab[[v]] <- paste0(round(df_tab[[v]] * 100, 1), "%")
+      }
+    }
+    
+    # Renderização da Tabela
     datatable(
       df_tab, 
       selection = 'single', 
       rownames = FALSE,
-      extensions = 'Buttons', # <--- Ativando extensão
+      extensions = 'Buttons',
       options = list(
         pageLength = 10, 
         scrollX = TRUE, 
-        dom = 'Bfrtip', # <--- 'B' adiciona os botões no topo
+        dom = 'Bfrtip',
         buttons = list(
           list(extend = 'excel', title = "Relatorio_Metas_Seduc", text = 'Baixar Excel'),
           list(extend = 'csv', title = "Dados_Brutos", text = 'Baixar CSV'),
@@ -441,7 +473,11 @@ server <- function(input, output, session) {
       )
     ) %>%
       formatStyle('CLASSIFICACAO',
-                  color = styleEqual(c('VERDE', 'AMARELO', 'VERMELHO'), c('#10b981', '#f59e0b', '#f43f5e')),
+                  # Usamos styleRow ou lógica condicional baseada no valor para colorir
+                  color = styleEqual(
+                    c('VERDE', 'VERDE SÓLIDO', 'VERDE CLARO', 'AMARELO', 'VERMELHO', 'AZUL'), 
+                    c('#10b981', '#10b981', '#10b981', '#f59e0b', '#f43f5e', '#3b82f6')
+                  ),
                   fontWeight = 'bold')
   })
 }

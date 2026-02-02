@@ -86,7 +86,8 @@ previsoes_finais_ef <- dados_teste_proc_ef %>%
 
 summary(previsoes_finais_ef$Amplitude_IC)
 
-corte_incerteza <- 0.25
+# As 25% escolas com maior Amplitude serão jogadas para os grupos de "incerteza"
+corte_incerteza <- quantile(previsoes_finais_ef$Amplitude_IC, 0.75)
 corte_sucesso <- 0.50
 
 resultado_calibrado_ef <- previsoes_finais_ef %>%
