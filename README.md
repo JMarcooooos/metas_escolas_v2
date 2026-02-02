@@ -44,25 +44,51 @@ Os objetivos são:
 
 2.  `conditional_effects(modelo_gam_final, effects = "IDEB_ANTERIOR:DESAFIO_CONTINUO")` 2.1 O que esperar: Isso vai gerar um gráfico de calor ou linhas coloridas. Você verá que para `IDEB_ANTERIOR` alto, a inclinação da linha do `DESAFIO` é muito mais íngreme (pequenos aumentos no desafio derrubam a probabilidade drasticamente) do que para `IDEB_ANTERIOR` baixo.
 
-3.  Modelo Bayesiano vai ficar com essa estrutura:
+3.  O modelo final utilizará `s()` para curvas de saturação e `t2()` para interação 3D entre ponto de partida e tamanho do desafio:
 
 ```{r}
-modelo_bayes_XX_final <- brm(
-  formula = bf(Y_num ~ . -CD_ESCOLA -NM_ESCOLA -NM_REGIONAL -NM_MUNICIPIO + (1 | NM_REGIONAL / NM_MUNICIPIO), 
-            family = bernoulli(link = "logit")),
-  data = dados_prontos_stan,
-  prior = c(
-    prior(student_t(3, 0, 2.5), class = "Intercept"),
-    prior(normal(0, 1), class = "b"),
-    prior(exponential(2), class = "sd")),
+# Fórmula refinada com Splines e Interações
+formula_gam_final <- bf(
+  Y_num ~ 
+    # Variáveis Lineares (Impacto direto)
+    CRESCIMENTO_LP + 
+    CRESCIMENTO_MT + 
+    IP +
+    
+    # Curva de Saturação: Crescimento histórico tem limite de impacto
+    s(CRESCIMENTO_MEDIO_ANUAL_IDEB, k = 4) +
+    
+    # Interação Não-Linear: O peso do Desafio depende da Nota Anterior
+    # (Captura o "Efeito Teto" e a "Armadilha da Pobreza")
+    t2(IDEB_ANTERIOR, DESAFIO_CONTINUO) +
+    
+    # Hierarquia: Regionais e Municípios (Partial Pooling)
+    (1 | NM_REGIONAL / NM_MUNICIPIO),
+    
+  family = bernoulli(link = "logit")
+)
+
+priors_gam <- c(
+  prior(student_t(3, 0, 2.5), class = "Intercept"),
+  prior(normal(0, 1), class = "b"),            # Para termos lineares
+  prior(student_t(3, 0, 2.5), class = "sds"),  # Para controlar a "wiggliness" dos Splines
+  prior(exponential(2), class = "sd")          # Para os grupos hierárquicos
+)
+
+modelo_bayes_ef_final <- brm(
+  formula = formula_gam_final,
+  data = dados_prontos_stan, # Lembrar de ter as cols DESAFIO_CONTINUO e IDEB_ANTERIOR 
+  prior = priors_gam,
   backend = "cmdstanr",
   chains = 4,
   cores = 2,
   threads = threading(2),
   iter = 3000,
   warmup = 1000,
-  control = list(adapt_delta = 0.98, max_treedepth = 15),
+  control = list(adapt_delta = 0.99, max_treedepth = 15), # Aumentado para lidar com t2()
   seed = 2026,
   file = "modelo_bayes_ef_final"
 )
 ```
+
+Eu espero muito que dê certo 
