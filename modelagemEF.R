@@ -39,7 +39,7 @@ receita_escala <- recipe(Y_num ~ ., data = dados_bayes_ef) %>%
   step_rename_at(all_predictors(), fn = ~ make.names(.)) %>% 
   prep()
 
-dados_prontos_stan <- bake(receita_escala, new_data = dados_bayes_ef)
+dados_prontos_stan_ef <- bake(receita_escala, new_data = dados_bayes_ef)
 # Tratamento para o teste (garantindo colunas iguais)
 dados_teste_proc_ef <- bake(receita_escala, new_data = dados_teste_ef %>% mutate(Y_num=0))
 
@@ -47,18 +47,30 @@ message("--- Iniciando Modelagem Bayesiana (CmdStanR) ---")
 
 # Modelo BRMS Otimizado para GitHub Actions
 modelo_bayes_ef_final <- brm(
-  formula = bf(Y_num ~ . -CD_ESCOLA -NM_ESCOLA -NM_REGIONAL -NM_MUNICIPIO + (1 | NM_REGIONAL) + (1 | NM_MUNICIPIO), 
-               family = bernoulli(link = "logit")),
-  data = dados_prontos_stan,
-  backend = "cmdstanr", # <--- Mais rápido e leve
+  formula = bf(
+    Y_num ~ CRESCIMENTO_LP + CRESCIMENTO_MT + IP +
+      s(CRESCIMENTO_MEDIO_ANUAL_IDEB, k = 4) + 
+      s(IDEB_ANTERIOR, k = 4) +
+      t2(IDEB_ANTERIOR, DESAFIO_AF) +
+      (1 | NM_REGIONAL / NM_MUNICIPIO),
+    family = bernoulli(link = "logit")),
+  data = dados_prontos_stan_ef,
+  prior = c(
+    prior(normal(-0.2614256, 1), class = "Intercept"), # logit(-0.26...) faz ficar centrado em 43% de prob. de alcançar a meta (que é próximo da proporção real de escolas que bateram a ultima meta), diminui o sd pra ficar mais concentrado nisso
+    prior(normal(0, 1), class = "b"),            # Para termos lineares
+    prior(exponential(3), class = "sds"),        # Para controlar a "wiggliness" dos Splines
+    prior(exponential(2), class = "sd")          # Para os grupos hierárquicos
+  ),
+  backend = "cmdstanr",
   chains = 4,
-  cores = 2,  # <--- Limite seguro para o GitHub Actions Free
-  threads = threading(2), # <--- Paralelismo intra-chain
-  iter = 2000,
+  cores = 2,  
+  threads = threading(2), 
+  iter = 3000,
   warmup = 1000,
-  control = list(adapt_delta = 0.95, max_treedepth = 12),
+  control = list(adapt_delta = 0.99, max_treedepth = 15),
   seed = 2026,
-  file = "modelo_bayes_ef_final" # Salva automaticamente como .rds
+  sample_prior = "only",
+  file = "modelo_bayes_ef_final" 
 )
 
 message("--- Gerando Previsões e Intervalos de Credibilidade ---")

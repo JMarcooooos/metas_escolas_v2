@@ -30,7 +30,7 @@ Os objetivos são:
 
 ## Sugestões do GEMINI (TODO)
 
--   [ ] Acrescentar variáveis vitais como: IDEB_ANTERIOR ; DESAFIO_CONTINUO = META_2025 - IDEB_ANTERIOR ; RELACAO_DESAFIO_NOTA = DESAFIO_CONTINUO / (IDEB_ANTERIOR + 0.01)
+-   [x] Acrescentar variáveis vitais como: IDEB_ANTERIOR ; DESAFIO_CONTINUO = META_2025 - IDEB_ANTERIOR ; RELACAO_DESAFIO_NOTA = DESAFIO_CONTINUO / (IDEB_ANTERIOR + 0.01)
 
 -   [ ] Interação Tensor Product (Sofisticado): t2() cria uma interação 3D entre ONDE a escola está e o TAMANHO do desafio. Isso resolve seu problema: "Desafio 0.2 na nota 7 é diferente de 0.2 na nota 4" `t2(IDEB_ANTERIOR, DESAFIO_CONTINUO)`
 
@@ -91,4 +91,4 @@ modelo_bayes_ef_final <- brm(
 )
 ```
 
-Eu espero muito que dê certo 
+Eu espero muito que dê certo

@@ -44,13 +44,15 @@ desafios_2023 <- desafios %>%
          IDEB_21_EM = VL_OBSERVADO_2021.y) %>%
   filter(!(is.na(IDEB_21_AF) & is.na(IDEB_21_EM))) %>%
   mutate(Desafio_23_AF = `Meta\r\nAnos Finais 2023` - IDEB_21_AF,
-         Desafio_23_EM = `Meta\r\nEnsino Médio 2023` - IDEB_21_EM) %>%
-  mutate(Desafio_AF_menor = case_when(Desafio_23_AF >= 0.4 ~ 'NAO',
-                                      Desafio_23_AF < 0.4 ~ 'SIM',
-                                      TRUE ~ NA_character_),
-         Desafio_EM_menor = case_when( Desafio_23_EM >= 0.4  ~ 'NAO',
-                                       Desafio_23_EM < 0.4  ~ 'SIM',
-                                       TRUE ~ NA_character_))
+         Desafio_23_EM = `Meta\r\nEnsino Médio 2023` - IDEB_21_EM) 
+
+# %>%
+#   mutate(Desafio_AF_menor = case_when(Desafio_23_AF >= 0.4 ~ 'NAO',
+#                                       Desafio_23_AF < 0.4 ~ 'SIM',
+#                                       TRUE ~ NA_character_),
+#          Desafio_EM_menor = case_when( Desafio_23_EM >= 0.4  ~ 'NAO',
+#                                        Desafio_23_EM < 0.4  ~ 'SIM',
+#                                        TRUE ~ NA_character_))
 
 rm(list=setdiff(ls(),c("bateu_meta_23","desafios_2023")))
 
@@ -86,13 +88,15 @@ desafios_2025 <- desafios %>%
          IDEB_23_EM = VL_OBSERVADO_2023.y) %>%
 filter(!(is.na(IDEB_23_AF) & is.na(IDEB_23_EM))) %>%
   mutate(Desafio_25_AF = `Meta 2025\r\nAnos Finais` - IDEB_23_AF,
-         Desafio_25_EM = `Meta 2025\r\nEnsino Médio` - IDEB_23_EM) %>%
-  mutate(Desafio_AF_menor = case_when(Desafio_25_AF >= 0.4 ~ 'NAO',
-                                      Desafio_25_AF < 0.4 ~ 'SIM',
-                                      TRUE ~ NA_character_),
-         Desafio_EM_menor = case_when( Desafio_25_EM >= 0.4  ~ 'NAO',
-                                       Desafio_25_EM < 0.4  ~ 'SIM',
-                                       TRUE ~ NA_character_))
+         Desafio_25_EM = `Meta 2025\r\nEnsino Médio` - IDEB_23_EM) 
+
+# %>%
+#   mutate(Desafio_AF_menor = case_when(Desafio_25_AF >= 0.4 ~ 'NAO',
+#                                       Desafio_25_AF < 0.4 ~ 'SIM',
+#                                       TRUE ~ NA_character_),
+#          Desafio_EM_menor = case_when( Desafio_25_EM >= 0.4  ~ 'NAO',
+#                                        Desafio_25_EM < 0.4  ~ 'SIM',
+#                                        TRUE ~ NA_character_))
 
 rm(list=setdiff(ls(),c("bateu_meta_23","desafios_2023","desafios_2025")))
 
@@ -530,6 +534,45 @@ rm(list=setdiff(ls(),c("bateu_meta_23",
                        "tx_21_ef","tx_21_em",
                        "tx_23_ef","tx_23_em")))
 
+# Colocar IDEB_ANTERIOR (2023) Treino ----
+
+idebanterior_21_ef <- read_excel("Bases/divulgacao_anos_finais_escolas_2023.xlsx", skip = 9) %>% 
+  select("SG_UF","ID_ESCOLA","NO_ESCOLA","REDE", "VL_OBSERVADO_2021") %>%
+  filter(SG_UF == 'GO',
+         REDE == 'Estadual') %>%
+  mutate(VL_OBSERVADO_2021 = as.numeric(case_when(VL_OBSERVADO_2021 == "-" ~ NA_character_, TRUE ~ VL_OBSERVADO_2021)))
+
+idebanterior_21_em <- read_excel("Bases/divulgacao_ensino_medio_escolas_2023.xlsx", skip = 9) %>% 
+  select("SG_UF","ID_ESCOLA","NO_ESCOLA","REDE", "VL_OBSERVADO_2021") %>%
+  filter(SG_UF == 'GO',
+         REDE == 'Estadual') %>%
+  mutate(VL_OBSERVADO_2021 = as.numeric(case_when(VL_OBSERVADO_2021 == "-" ~ NA_character_, TRUE ~ VL_OBSERVADO_2021)))
+
+
+# Colocar IDEB_ANTERIOR (2025) Teste ----
+
+idebanterior_23_ef <- read_excel("Bases/divulgacao_anos_finais_escolas_2023.xlsx", skip = 9) %>% 
+  select("SG_UF","ID_ESCOLA","NO_ESCOLA","REDE", "VL_OBSERVADO_2023") %>%
+  filter(SG_UF == 'GO',
+         REDE == 'Estadual') %>%
+  mutate(VL_OBSERVADO_2023 = as.numeric(case_when(VL_OBSERVADO_2023 == "-" ~ NA_character_, TRUE ~ VL_OBSERVADO_2023)))
+
+idebanterior_23_em <- read_excel("Bases/divulgacao_ensino_medio_escolas_2023.xlsx", skip = 9) %>% 
+  select("SG_UF","ID_ESCOLA","NO_ESCOLA","REDE", "VL_OBSERVADO_2023") %>%
+  filter(SG_UF == 'GO',
+         REDE == 'Estadual') %>%
+  mutate(VL_OBSERVADO_2023 = as.numeric(case_when(VL_OBSERVADO_2023 == "-" ~ NA_character_, TRUE ~ VL_OBSERVADO_2023)))
+
+
+rm(list=setdiff(ls(),c("bateu_meta_23",
+                       "desafios_2023","desafios_2025",
+                       "crescimento_20222023","crescimento_20242025",
+                       "ideb_historico_af_20052021","ideb_historico_em_20052021",
+                       "ideb_historico_af_20052023","ideb_historico_em_20052023",
+                       "tx_21_ef","tx_21_em",
+                       "tx_23_ef","tx_23_em",
+                       "idebanterior_21_ef", "idebanterior_21_em",
+                       "idebanterior_23_ef", "idebanterior_23_em")))
 
 # ===========================
 # ==== MONTANDO AS BASES ====
@@ -540,57 +583,69 @@ rm(list=setdiff(ls(),c("bateu_meta_23",
 # ENSINO FUNDAMENTAL ANOS FINAIS ----
 dados_treino_ef <- bateu_meta_23 %>% select(`Código da Escola`,`Atingiu a Meta\r\nAnos Finais`) %>%
   filter(!is.na(`Atingiu a Meta\r\nAnos Finais`)) %>%
-  left_join(desafios_2023 %>% select(`Código da Escola`,Desafio_AF_menor),by="Código da Escola") %>%
+  left_join(desafios_2023 %>% select(`Código da Escola`,Desafio_23_AF),by="Código da Escola") %>%
   left_join(crescimento_20222023[["EF_LP"]] %>% select(`Código Escola`,Crescimento) %>% rename(Crescimento_LP = Crescimento) %>% mutate(`Código Escola` = as.double(`Código Escola`)),
             by=c("Código da Escola" = "Código Escola")) %>%
   left_join(crescimento_20222023[["EF_MT"]] %>% select(`Código Escola`,Crescimento) %>% rename(Crescimento_MT = Crescimento) %>% mutate(`Código Escola` = as.double(`Código Escola`)),
             by=c("Código da Escola" = "Código Escola")) %>%
   left_join(ideb_historico_af_20052021 %>% select(ID_ESCOLA,Crescimento_Medio_Anual),by=c("Código da Escola" = "ID_ESCOLA")) %>%
-  left_join(tx_21_ef %>% select(ID_ESCOLA,VL_INDICADOR_REND_2021) %>% rename(IP = VL_INDICADOR_REND_2021), by=c("Código da Escola" = "ID_ESCOLA"))
+  left_join(tx_21_ef %>% select(ID_ESCOLA,VL_INDICADOR_REND_2021) %>% rename(IP = VL_INDICADOR_REND_2021), by=c("Código da Escola" = "ID_ESCOLA")) %>%
+  left_join(idebanterior_21_ef %>% select(ID_ESCOLA,VL_OBSERVADO_2021) %>% rename(IDEB_ANTERIOR = VL_OBSERVADO_2021), by = c("Código da Escola" = "ID_ESCOLA")) %>%
+  mutate(RELACAO_DESAFIO_NOTA = Desafio_23_AF / (IDEB_ANTERIOR + 0.01))
   
 # ENSINO MEDIO ----
 dados_treino_em <- bateu_meta_23 %>% select(`Código da Escola`,`Atingiu a Meta\r\nEnsino Médio`) %>%
   filter(!is.na(`Atingiu a Meta\r\nEnsino Médio`)) %>%
-  left_join(desafios_2023 %>% select(`Código da Escola`,Desafio_EM_menor),by="Código da Escola") %>%
+  left_join(desafios_2023 %>% select(`Código da Escola`,Desafio_23_EM),by="Código da Escola") %>%
   left_join(crescimento_20222023[["EM_LP"]] %>% select(`Código Escola`,Crescimento) %>% rename(Crescimento_LP = Crescimento) %>% mutate(`Código Escola` = as.double(`Código Escola`)),
             by=c("Código da Escola" = "Código Escola")) %>%
   left_join(crescimento_20222023[["EM_MT"]] %>% select(`Código Escola`,Crescimento) %>% rename(Crescimento_MT = Crescimento) %>% mutate(`Código Escola` = as.double(`Código Escola`)),
             by=c("Código da Escola" = "Código Escola")) %>%
   left_join(ideb_historico_em_20052021 %>% select(ID_ESCOLA,Crescimento_Medio_Anual),by=c("Código da Escola" = "ID_ESCOLA")) %>%
-  left_join(tx_21_em %>% select(ID_ESCOLA,VL_INDICADOR_REND_2021) %>% rename(IP = VL_INDICADOR_REND_2021), by=c("Código da Escola" = "ID_ESCOLA"))
+  left_join(tx_21_em %>% select(ID_ESCOLA,VL_INDICADOR_REND_2021) %>% rename(IP = VL_INDICADOR_REND_2021), by=c("Código da Escola" = "ID_ESCOLA")) %>%
+  left_join(idebanterior_21_em %>% select(ID_ESCOLA,VL_OBSERVADO_2021) %>% rename(IDEB_ANTERIOR = VL_OBSERVADO_2021), by = c("Código da Escola" = "ID_ESCOLA")) %>%
+  mutate(RELACAO_DESAFIO_NOTA = Desafio_23_EM / (IDEB_ANTERIOR + 0.01))
+
 
 
 # DADOS TESTE ----
 
 # ENSINO FUNDAMENTAL ANOS FINAIS ----
-dados_teste_ef <- desafios_2025 %>% select(Cod_Inep,Desafio_AF_menor) %>%
-  filter(!is.na(Desafio_AF_menor)) %>%
+dados_teste_ef <- desafios_2025 %>% select(Cod_Inep,Desafio_25_AF) %>%
+  filter(!is.na(Desafio_25_AF)) %>%
   left_join(crescimento_20242025[["EF_LP"]] %>% select(`Código da escola`,Crescimento) %>% rename(Crescimento_LP = Crescimento) %>% mutate(`Código da escola` = as.double(`Código da escola`)),
             by=c("Cod_Inep" = "Código da escola")) %>%
   left_join(crescimento_20242025[["EF_MT"]] %>% select(`Código da escola`,Crescimento) %>% rename(Crescimento_MT = Crescimento) %>% mutate(`Código da escola` = as.double(`Código da escola`)),
             by=c("Cod_Inep" = "Código da escola")) %>%
   left_join(ideb_historico_af_20052023 %>% select(ID_ESCOLA,Crescimento_Medio_Anual),by=c("Cod_Inep" = "ID_ESCOLA")) %>%
-  left_join(tx_23_ef %>% select(ID_ESCOLA,VL_INDICADOR_REND_2023) %>% rename(IP = VL_INDICADOR_REND_2023), by=c("Cod_Inep" = "ID_ESCOLA"))
+  left_join(tx_23_ef %>% select(ID_ESCOLA,VL_INDICADOR_REND_2023) %>% rename(IP = VL_INDICADOR_REND_2023), by=c("Cod_Inep" = "ID_ESCOLA")) %>%
+  left_join(idebanterior_23_ef %>% select(ID_ESCOLA,VL_OBSERVADO_2023) %>% rename(IDEB_ANTERIOR = VL_OBSERVADO_2023), by = c("Cod_Inep" = "ID_ESCOLA")) %>%
+  mutate(RELACAO_DESAFIO_NOTA = Desafio_25_AF / (IDEB_ANTERIOR + 0.01))
+
+
+
 
 # ENSINO MÉDIO ----
-dados_teste_em <- desafios_2025 %>% select(Cod_Inep,Desafio_EM_menor) %>%
-  filter(!is.na(Desafio_EM_menor)) %>%
+dados_teste_em <- desafios_2025 %>% select(Cod_Inep,Desafio_25_EM) %>%
+  filter(!is.na(Desafio_25_EM)) %>%
   left_join(crescimento_20242025[["EM_LP"]] %>% select(`Código da escola`,Crescimento) %>% rename(Crescimento_LP = Crescimento) %>% mutate(`Código da escola` = as.double(`Código da escola`)),
             by=c("Cod_Inep" = "Código da escola")) %>%
   left_join(crescimento_20242025[["EM_MT"]] %>% select(`Código da escola`,Crescimento) %>% rename(Crescimento_MT = Crescimento) %>% mutate(`Código da escola` = as.double(`Código da escola`)),
             by=c("Cod_Inep" = "Código da escola")) %>%
   left_join(ideb_historico_em_20052023 %>% select(ID_ESCOLA,Crescimento_Medio_Anual),by=c("Cod_Inep" = "ID_ESCOLA")) %>%
-  left_join(tx_23_em %>% select(ID_ESCOLA,VL_INDICADOR_REND_2023) %>% rename(IP = VL_INDICADOR_REND_2023), by=c("Cod_Inep" = "ID_ESCOLA"))
+  left_join(tx_23_em %>% select(ID_ESCOLA,VL_INDICADOR_REND_2023) %>% rename(IP = VL_INDICADOR_REND_2023), by=c("Cod_Inep" = "ID_ESCOLA"))  %>%
+  left_join(idebanterior_23_em %>% select(ID_ESCOLA,VL_OBSERVADO_2023) %>% rename(IDEB_ANTERIOR = VL_OBSERVADO_2023), by = c("Cod_Inep" = "ID_ESCOLA")) %>%
+  mutate(RELACAO_DESAFIO_NOTA = Desafio_25_EM / (IDEB_ANTERIOR + 0.01))
 
 
 # Renomeando ----
 
 
-names(dados_treino_ef) <- c("CD_ESCOLA","Y","DESAFIO_AF_MENOR","CRESCIMENTO_LP","CRESCIMENTO_MT","CRESCIMENTO_MEDIO_ANUAL_IDEB","IP")
-names(dados_teste_ef) <- c("CD_ESCOLA","DESAFIO_AF_MENOR","CRESCIMENTO_LP","CRESCIMENTO_MT","CRESCIMENTO_MEDIO_ANUAL_IDEB","IP")
+names(dados_treino_ef) <- c("CD_ESCOLA","Y","DESAFIO_AF","CRESCIMENTO_LP","CRESCIMENTO_MT","CRESCIMENTO_MEDIO_ANUAL_IDEB","IP","IDEB_ANTERIOR","RELACAO_DESAFIO_NOTA")
+names(dados_teste_ef) <- c("CD_ESCOLA","DESAFIO_AF","CRESCIMENTO_LP","CRESCIMENTO_MT","CRESCIMENTO_MEDIO_ANUAL_IDEB","IP","IDEB_ANTERIOR","RELACAO_DESAFIO_NOTA")
 
-names(dados_treino_em) <- c("CD_ESCOLA","Y","DESAFIO_EM_MENOR","CRESCIMENTO_LP","CRESCIMENTO_MT","CRESCIMENTO_MEDIO_ANUAL_IDEB","IP")
-names(dados_teste_em) <- c("CD_ESCOLA","DESAFIO_EM_MENOR","CRESCIMENTO_LP","CRESCIMENTO_MT","CRESCIMENTO_MEDIO_ANUAL_IDEB","IP")
+names(dados_treino_em) <- c("CD_ESCOLA","Y","DESAFIO_EM","CRESCIMENTO_LP","CRESCIMENTO_MT","CRESCIMENTO_MEDIO_ANUAL_IDEB","IP","IDEB_ANTERIOR","RELACAO_DESAFIO_NOTA")
+names(dados_teste_em) <- c("CD_ESCOLA","DESAFIO_EM","CRESCIMENTO_LP","CRESCIMENTO_MT","CRESCIMENTO_MEDIO_ANUAL_IDEB","IP","IDEB_ANTERIOR","RELACAO_DESAFIO_NOTA")
 
 # Acrescentando NM_MUNICIPIO e NM_REGIONAL ----
 
@@ -600,20 +655,20 @@ dados_regmun <- readxl::read_excel("Bases/Metas para Ideb 2025 - Versão Final.x
 # EF
 dados_treino_ef <- dados_treino_ef %>%
   left_join(dados_regmun,by=c("CD_ESCOLA" = "Cod_Inep"))
-names(dados_treino_ef)[c(8,9,10)] <- c("NM_REGIONAL","NM_MUNICIPIO","NM_ESCOLA")
+names(dados_treino_ef)[c(10,11,12)] <- c("NM_REGIONAL","NM_MUNICIPIO","NM_ESCOLA")
 
 dados_teste_ef <- dados_teste_ef %>%
   left_join(dados_regmun,by=c("CD_ESCOLA" = "Cod_Inep"))
-names(dados_teste_ef)[c(7,8,9)] <- c("NM_REGIONAL","NM_MUNICIPIO","NM_ESCOLA")
+names(dados_teste_ef)[c(9,10,11)] <- c("NM_REGIONAL","NM_MUNICIPIO","NM_ESCOLA")
 
 # EM
 dados_treino_em <- dados_treino_em %>%
   left_join(dados_regmun,by=c("CD_ESCOLA" = "Cod_Inep"))
-names(dados_treino_em)[c(8,9,10)] <- c("NM_REGIONAL","NM_MUNICIPIO","NM_ESCOLA")
+names(dados_treino_em)[c(10,11,12)] <- c("NM_REGIONAL","NM_MUNICIPIO","NM_ESCOLA")
 
 dados_teste_em <- dados_teste_em %>%
   left_join(dados_regmun,by=c("CD_ESCOLA" = "Cod_Inep"))
-names(dados_teste_em)[c(7,8,9)] <- c("NM_REGIONAL","NM_MUNICIPIO","NM_ESCOLA")
+names(dados_teste_em)[c(9,10,11)] <- c("NM_REGIONAL","NM_MUNICIPIO","NM_ESCOLA")
 
 # Salvando ----
 
