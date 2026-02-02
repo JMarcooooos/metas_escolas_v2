@@ -329,12 +329,10 @@ server <- function(input, output, session) {
   })
   
   output$kpi_total   <- renderText({ format(nrow(dados_filtrados()), big.mark = ".") })
-  # Ajuste no KPI para capturar qualquer variação de VERMELHO ou VERDE (ex: Verde Sólido, Verde Claro)
   output$kpi_risco   <- renderText({ format(sum(grepl("VERMELHO", dados_filtrados()$CLASSIFICACAO)), big.mark = ".") })
-  output$kpi_sucesso <- renderText({ format(sum(grepl("VERDE", dados_filtrados()$CLASSIFICACAO)), big.mark = ".") })
+  output$kpi_sucesso <- renderText({ format(sum(grepl("VERDE|AZUL", dados_filtrados()$CLASSIFICACAO)), big.mark = ".") })
   
-  paleta <- colorNumeric(palette = c("#ef4444", "#f59e0b", "#10b981"), domain = c(0, 1))
-  
+  # output$mapa inicial
   output$mapa <- renderLeaflet({
     leaflet() %>%
       addProviderTiles(providers$CartoDB.DarkMatter) %>% 
@@ -363,24 +361,37 @@ server <- function(input, output, session) {
     }
   }, ignoreNULL = FALSE)
   
+  # ----------------------------------------------------------------------------
+  # OBSERVE DO MAPA (AQUI FOI A ALTERAÇÃO)
+  # ----------------------------------------------------------------------------
   observe({
     df <- dados_filtrados()
     if(nrow(df) == 0) { leafletProxy("mapa") %>% clearMarkers(); return() }
     
-    # Preparando variáveis para o popup (tratando nulos e porcentagens)
+    # --- MUDANÇA: CRIANDO A COR BASEADA NA CLASSIFICAÇÃO ---
+    df <- df %>%
+      mutate(
+        COR_FINAL = case_when(
+          grepl("VERDE", CLASSIFICACAO)    ~ "#10b981", # Verde
+          grepl("VERMELHO", CLASSIFICACAO) ~ "#ef4444", # Vermelho
+          grepl("AZUL", CLASSIFICACAO)     ~ "#3b82f6", # Azul
+          grepl("AMARELO", CLASSIFICACAO)  ~ "#f59e0b", # Amarelo
+          TRUE                             ~ "#9ca3af"  # Cinza padrão
+        )
+      )
+    
+    # Preparando variáveis para o popup
     p_media <- round(df$Prob_Media * 100, 1)
     
-    # Verifica se as colunas novas existem para compor o popup
     p_min  <- if("Prob_Min_Credivel" %in% names(df)) paste0(round(df$Prob_Min_Credivel * 100, 1), "%") else "--"
     p_max  <- if("Prob_Max_Credivel" %in% names(df)) paste0(round(df$Prob_Max_Credivel * 100, 1), "%") else "--"
     amp_ic <- if("Amplitude_IC" %in% names(df)) paste0(round(df$Amplitude_IC * 100, 1), "%") else "--"
     
-    # Lógica de cor do badge no popup (incluindo Azul)
     cor_badge <- case_when(
-      grepl("VERDE", df$CLASSIFICACAO) ~ "#dcfce7; color: #166534",
-      grepl("AMARELO", df$CLASSIFICACAO) ~ "#fef3c7; color: #b45309",
-      grepl("AZUL", df$CLASSIFICACAO) ~ "#dbeafe; color: #1e40af", # Estilo para Azul
-      TRUE ~ "#fee2e2; color: #991b1b" # Vermelho como default restante
+      grepl("VERDE", df$CLASSIFICACAO)    ~ "#dcfce7; color: #166534",
+      grepl("AMARELO", df$CLASSIFICACAO)  ~ "#fef3c7; color: #b45309",
+      grepl("AZUL", df$CLASSIFICACAO)     ~ "#dbeafe; color: #1e40af", 
+      TRUE                                ~ "#fee2e2; color: #991b1b"
     )
     
     popup_content <- paste0(
@@ -397,7 +408,6 @@ server <- function(input, output, session) {
       "<span style='padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; font-weight: 700; background: ", cor_badge, ";'>", df$CLASSIFICACAO, "</span>",
       "</div>",
       
-      # Mini painel de estatísticas adicionais no popup
       "<div style='margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 0.8rem; display: flex; justify-content: space-between;'>",
       "<div style='text-align: center;'><span style='color: #64748b;'>Mín</span><br><strong>", p_min, "</strong></div>",
       "<div style='text-align: center;'><span style='color: #64748b;'>Máx</span><br><strong>", p_max, "</strong></div>",
@@ -412,7 +422,9 @@ server <- function(input, output, session) {
       clearMarkers() %>%
       addCircleMarkers(
         lng = ~LONGITUDE, lat = ~LATITUDE, radius = 7, color = "#ffffff", weight = 1.5,
-        fillColor = ~paleta(Prob_Media), fillOpacity = 0.9,
+        # --- MUDANÇA: USANDO A COLUNA COR_FINAL ---
+        fillColor = ~COR_FINAL, 
+        fillOpacity = 0.9,
         popup = popup_content, options = pathOptions(pane = "markers")
       )
   })
@@ -431,30 +443,23 @@ server <- function(input, output, session) {
     }
   })
   
-  # --- Tabela COM NOVAS COLUNAS E FORMATAÇÃO ---
+  # --- Tabela ---
   output$tabela <- renderDT({
     df <- dados_filtrados()
     
-    # Definição das colunas a serem exibidas (incluindo as novas)
     colunas_desejadas <- c("NM_ESCOLA", "NM_MUNICIPIO", "NM_REGIONAL", "CLASSIFICACAO", 
                            "Prob_Media", "Prob_Min_Credivel", "Prob_Max_Credivel", "Amplitude_IC")
     
-    # Seleciona apenas as que existem no dataframe (para evitar erro)
     colunas_finais <- intersect(colunas_desejadas, names(df))
-    
     df_tab <- df %>% select(all_of(colunas_finais))
     
-    # Transformação para porcentagem (texto) para exibição
     vars_percent <- c("Prob_Media", "Prob_Min_Credivel", "Prob_Max_Credivel", "Amplitude_IC")
-    
     for(v in vars_percent) {
       if(v %in% names(df_tab)) {
-        # Multiplica por 100 e adiciona %
         df_tab[[v]] <- paste0(round(df_tab[[v]] * 100, 1), "%")
       }
     }
     
-    # Renderização da Tabela
     datatable(
       df_tab, 
       selection = 'single', 
@@ -473,7 +478,6 @@ server <- function(input, output, session) {
       )
     ) %>%
       formatStyle('CLASSIFICACAO',
-                  # Usamos styleRow ou lógica condicional baseada no valor para colorir
                   color = styleEqual(
                     c('VERDE', 'VERDE SÓLIDO', 'VERDE CLARO', 'AMARELO', 'VERMELHO', 'AZUL'), 
                     c('#10b981', '#10b981', '#10b981', '#f59e0b', '#f43f5e', '#3b82f6')
