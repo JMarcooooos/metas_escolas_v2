@@ -92,3 +92,15 @@ modelo_bayes_ef_final <- brm(
 ```
 
 Eu espero muito que dê certo
+
+
+## Fluxo de Trabalho Bayesiano
+
+1. Juntar os dados e montar conhecimento de priores
+2. Criar Modelo
+3. Checar distribuição das priores (pp_check com sample_prior = "only")
+4. Ajustar modelo aos dados
+5. Avaliar amostras
+6. Avaliar distribuição preditiva posteriori
+
+

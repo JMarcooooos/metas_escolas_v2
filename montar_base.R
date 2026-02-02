@@ -326,8 +326,8 @@ saego_2024e2025_EF_LP <- left_join(
   saego_2024_EF %>% select(-`Proficiencia MT`), 
   saego_2025_EF %>% select(-`Proficiencia MT`,-Escola), 
   by = "Código da escola"
-) %>% rename(Proficiencia_2024 = `Proficiencia LP.y`,
-             Proficiencia_2025 = `Proficiencia LP.x`) %>%
+) %>% rename(Proficiencia_2024 = `Proficiencia LP.x`,
+             Proficiencia_2025 = `Proficiencia LP.y`) %>%
   mutate(
     Proficiencia_2024 = as.numeric(gsub(",", ".", Proficiencia_2024)),
     Proficiencia_2025 = as.numeric(gsub(",", ".", Proficiencia_2025))) %>%
@@ -338,8 +338,8 @@ saego_2024e2025_EF_MT <- left_join(
   saego_2024_EF %>% select(-`Proficiencia LP`), 
   saego_2025_EF %>% select(-`Proficiencia LP`,-Escola), 
   by = "Código da escola"
-) %>% rename(Proficiencia_2024 = `Proficiencia MT.y`,
-             Proficiencia_2025 = `Proficiencia MT.x`) %>%
+) %>% rename(Proficiencia_2024 = `Proficiencia MT.x`,
+             Proficiencia_2025 = `Proficiencia MT.y`) %>%
   mutate(
     Proficiencia_2024 = as.numeric(gsub(",", ".", Proficiencia_2024)),
     Proficiencia_2025 = as.numeric(gsub(",", ".", Proficiencia_2025))) %>%
@@ -351,8 +351,8 @@ saego_2024e2025_EM_LP <- left_join(
   saego_2024_EM %>% select(-`Proficiencia MT`), 
   saego_2025_EM %>% select(-`Proficiencia MT`,-Escola), 
   by = "Código da escola"
-) %>% rename(Proficiencia_2024 = `Proficiencia LP.y`,
-             Proficiencia_2025 = `Proficiencia LP.x`) %>%
+) %>% rename(Proficiencia_2024 = `Proficiencia LP.x`,
+             Proficiencia_2025 = `Proficiencia LP.y`) %>%
   mutate(
     Proficiencia_2024 = as.numeric(gsub(",", ".", Proficiencia_2024)),
     Proficiencia_2025 = as.numeric(gsub(",", ".", Proficiencia_2025))) %>%
@@ -363,8 +363,8 @@ saego_2024e2025_EM_MT <- left_join(
   saego_2024_EM %>% select(-`Proficiencia LP`), 
   saego_2025_EM %>% select(-`Proficiencia LP`,-Escola), 
   by = "Código da escola"
-) %>% rename(Proficiencia_2024 = `Proficiencia MT.y`,
-             Proficiencia_2025 = `Proficiencia MT.x`) %>%
+) %>% rename(Proficiencia_2024 = `Proficiencia MT.x`,
+             Proficiencia_2025 = `Proficiencia MT.y`) %>%
   mutate(
     Proficiencia_2024 = as.numeric(gsub(",", ".", Proficiencia_2024)),
     Proficiencia_2025 = as.numeric(gsub(",", ".", Proficiencia_2025))) %>%
@@ -669,6 +669,17 @@ names(dados_treino_em)[c(10,11,12)] <- c("NM_REGIONAL","NM_MUNICIPIO","NM_ESCOLA
 dados_teste_em <- dados_teste_em %>%
   left_join(dados_regmun,by=c("CD_ESCOLA" = "Cod_Inep"))
 names(dados_teste_em)[c(9,10,11)] <- c("NM_REGIONAL","NM_MUNICIPIO","NM_ESCOLA")
+
+
+
+# Fugindo da multicolinearidade ----
+
+dados_treino_ef <- dados_treino_ef %>% mutate(CRESCIMENTO_GERAL = (CRESCIMENTO_LP + CRESCIMENTO_MT) / 2)
+dados_teste_ef <- dados_teste_ef %>% mutate(CRESCIMENTO_GERAL = (CRESCIMENTO_LP + CRESCIMENTO_MT) / 2)
+
+dados_treino_em <- dados_treino_em %>% mutate(CRESCIMENTO_GERAL = (CRESCIMENTO_LP + CRESCIMENTO_MT) / 2)
+dados_teste_em <- dados_teste_em %>% mutate(CRESCIMENTO_GERAL = (CRESCIMENTO_LP + CRESCIMENTO_MT) / 2)
+
 
 # Salvando ----
 

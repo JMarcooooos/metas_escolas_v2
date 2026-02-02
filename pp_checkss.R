@@ -94,34 +94,41 @@ modelo_bayes_em_final <- brm(
 
 pp_check(modelo_bayes_em_final,ndraws = 1000)
 pp_check(modelo_bayes_em_final, type = "stat", stat = "mean", prefix = "ppd")
-pp_check(modelo_bayes_ef_final,type = "stat_grouped",  stat = "mean", group = "NM_REGIONAL", ndraws = 200)
-pp_check(modelo_bayes_ef_final,type="scatter_avg_grouped",group = "NM_REGIONAL")
-pp_check(modelo_bayes_ef_final,type="pit_ecdf_grouped",group = "NM_REGIONAL")
+pp_check(modelo_bayes_em_final,type = "stat_grouped",  stat = "mean", group = "NM_REGIONAL", ndraws = 200)
+pp_check(modelo_bayes_em_final,type="scatter_avg_grouped",group = "NM_REGIONAL")
+pp_check(modelo_bayes_em_final,type="pit_ecdf_grouped",group = "NM_REGIONAL")
 
-pp_check(modelo_bayes_ef_final,type="error_binned")
-pp_check(modelo_bayes_ef_final,type="bars_grouped",group = "NM_REGIONAL")
-pp_check(modelo_bayes_ef_final,type="ecdf_overlay")
+pp_check(modelo_bayes_em_final,type="error_binned")
+pp_check(modelo_bayes_em_final,type="bars_grouped",group = "NM_REGIONAL")
+pp_check(modelo_bayes_em_final,type="ecdf_overlay")
 
 
 
 conditional_effects(modelo_bayes_em_final, 
-                    effects = "CRESCIMENTO_LP", 
+                    effects = "CRESCIMENTO_GERAL", 
                     method = "predict", 
                     spaghetti = TRUE, 
                     ndraws = 100) 
 
 conditional_effects(modelo_bayes_em_final, 
-                    effects = "CRESCIMENTO_MT", 
+                    effects = "RELACAO_DESAFIO_NOTA", 
+                    method = "predict", 
+                    spaghetti = TRUE, 
+                    ndraws = 100) 
+
+conditional_effects(modelo_bayes_em_final, 
+                    effects = "IP", 
+                    method = "predict", 
+                    spaghetti = TRUE, 
+                    ndraws = 100) 
+
+conditional_effects(modelo_bayes_em_final, 
+                    effects = "CRESCIMENTO_GERAL:RELACAO_DESAFIO_NOTA", 
                     method = "predict", 
                     spaghetti = TRUE, 
                     ndraws = 100) 
 conditional_effects(modelo_bayes_em_final, 
-                    effects = "IDEB_ANTERIOR", 
-                    method = "predict", 
-                    spaghetti = TRUE, 
-                    ndraws = 100) 
-conditional_effects(modelo_bayes_em_final, 
-                    effects = "CRESCIMENTO_MEDIO_ANUAL_IDEB", 
+                    effects = "CRESCIMENTO_GERAL:IP", 
                     method = "predict", 
                     spaghetti = TRUE, 
                     ndraws = 100) 
