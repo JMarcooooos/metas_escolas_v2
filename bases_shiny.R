@@ -12,6 +12,7 @@ dados_modelo <- bind_rows(df_ef, df_em)
 
 message("--- 2. CRUZANDO COM LAT/LONG ---")
 dados_latlong <- read_excel("ref_latlong.xlsx") %>%
+  mutate(`CÓDIGO ESCOLA` = as.double(`CÓDIGO ESCOLA`)) %>%
   select(CD_ESCOLA = `CÓDIGO ESCOLA`, LATITUDE, LONGITUDE) %>%
   mutate(
     LATITUDE = as.numeric(gsub(",", ".", LATITUDE)),
