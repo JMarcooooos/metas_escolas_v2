@@ -109,7 +109,7 @@ resultado_calibrado_em <- previsoes_finais_em %>%
     dados_teste_em %>% select(CD_ESCOLA, NM_ESCOLA, NM_REGIONAL, NM_MUNICIPIO),
     by = "CD_ESCOLA"
   ) %>%
-  select(CD_ESCOLA, NM_ESCOLA, Prob_Media, Amplitude_IC, CLASSIFICACAO)
+  select(NM_REGIONAL, NM_MUNICIPIO, CD_ESCOLA, NM_ESCOLA, Prob_Media, Amplitude_IC, Prob_Min_Credivel, Prob_Max_Credivel,CLASSIFICACAO)
 
 message("--- Salvando Resultados ---")
 
